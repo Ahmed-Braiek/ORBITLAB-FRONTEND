@@ -30,21 +30,23 @@ export class AppComponent implements AfterViewInit,OnDestroy{
  get active(){return this.planets.find(p=>p.id===this.selected)??planets[2];}get planetIndex(){return this.planets.findIndex(p=>p.id===this.selected);}
  private scene=new THREE.Scene();private camera=new THREE.PerspectiveCamera(48,1,.1,3000);private renderer?:THREE.WebGLRenderer;private controls?:OrbitControls;private frame=0;private observer?:ResizeObserver;private last=0;
  private worlds:{p:Planet,mesh:THREE.Mesh,group:THREE.Group,orbit:number,radius:number,angle:number,cloud?:THREE.Mesh}[]=[];private lines:THREE.LineLoop[]=[];
+ private orbitLayers:{id:string;core:THREE.LineLoop;glow:THREE.Mesh;halo:THREE.Mesh}[]=[];
+ private starField?:THREE.Points<THREE.BufferGeometry,THREE.ShaderMaterial>;
+ private starUniforms={uTime:{value:0},uPixelRatio:{value:1},uBrightness:{value:1}};
  private travelTarget=new THREE.Vector3();private travelOffset=new THREE.Vector3(12,6,18);private overviewActive=false;private flight?:{elapsed:number,duration:number,fromPos:THREE.Vector3,fromTarget:THREE.Vector3,toPos:THREE.Vector3,toTarget:THREE.Vector3};private followedPosition=new THREE.Vector3();private textures:THREE.Texture[]=[];private down={x:0,y:0};
  private pointer=new THREE.Vector2();private ray=new THREE.Raycaster();private earthNight?:THREE.Texture;private earthShader?:THREE.ShaderMaterial;private ringTexture?:THREE.Texture;
  ngAfterViewInit(){
  const host=this.viewport.nativeElement;
  this.renderer=new THREE.WebGLRenderer({antialias:true,powerPreference:'high-performance',alpha:true});
  this.renderer.setPixelRatio(Math.min(devicePixelRatio,1.5));this.renderer.outputColorSpace=THREE.SRGBColorSpace;
- this.renderer.toneMapping=THREE.ACESFilmicToneMapping;this.renderer.toneMappingExposure=1.4;host.appendChild(this.renderer.domElement);
+ this.renderer.toneMapping=THREE.ACESFilmicToneMapping;this.renderer.toneMappingExposure=1.2;host.appendChild(this.renderer.domElement);
+ this.scene.background=new THREE.Color(0x020611);
  this.camera.position.set(30,18,40);this.controls=new OrbitControls(this.camera,this.renderer.domElement);
  this.controls.enableDamping=true;this.controls.dampingFactor=.055;this.controls.rotateSpeed=.55;this.controls.zoomSpeed=.85;this.controls.enablePan=false;this.controls.minPolarAngle=.08;this.controls.maxPolarAngle=Math.PI-.08;this.controls.minDistance=2;this.controls.maxDistance=500;this.controls.addEventListener('start',()=>{this.flight=undefined;this.controls!.enabled=true;});
  this.scene.add(new THREE.AmbientLight(0x8c9dc0,.07));
  this.scene.add(new THREE.PointLight(0xffecd6,7000,0,1.3));
  this.scene.add(new THREE.Mesh(new THREE.SphereGeometry(5,64,48),new THREE.MeshBasicMaterial({color:0xffdb87})));
- const stars=new Float32Array(1800*3);for(let i=0;i<1800;i++){const a=Math.random()*6.283,u=Math.random()*2-1,r=600+Math.random()*600,k=Math.sqrt(1-u*u);stars[i*3]=r*k*Math.cos(a);stars[i*3+1]=r*u;stars[i*3+2]=r*k*Math.sin(a);}
- const starGeo=new THREE.BufferGeometry();starGeo.setAttribute('position',new THREE.BufferAttribute(stars,3));
- this.scene.add(new THREE.Points(starGeo,new THREE.PointsMaterial({color:0xcfe0ff,size:1,sizeAttenuation:false,transparent:true,opacity:.58,depthWrite:false})));
+ this.createStarField();
  const loader=new THREE.TextureLoader();const colors=[0xada69c,0xdfbe8c,0xffffff,0xbb7052,0xd3b18e,0xcdbb91,0x8fd5df,0x4e83d5];let loaded=0;
  planets.forEach((p,i)=>{
  const orbit=14+Math.pow(i+1,1.38)*9;const radius=Math.min(7,Math.max(1.4,Math.pow(p.radiusKm/6371,.42)*2.4));
@@ -82,11 +84,91 @@ export class AppComponent implements AfterViewInit,OnDestroy{
  for(let k=0;k<uv.count;k++){const d=Math.hypot(pos.getX(k),pos.getY(k))/radius;uv.setXY(k,(d-1.25)/1.2,.5);}uv.needsUpdate=true;
  const ring=new THREE.Mesh(geo,new THREE.MeshBasicMaterial({map:ringTex,side:THREE.DoubleSide,transparent:true,depthWrite:false}));ring.rotation.x=-Math.PI/2;ring.rotation.z=.28;group.add(ring);
  }
- const points=Array.from({length:256},(_,j)=>{const a=j/256*6.283185;return new THREE.Vector3(Math.cos(a)*orbit,0,Math.sin(a)*orbit);});
- const line=new THREE.LineLoop(new THREE.BufferGeometry().setFromPoints(points),new THREE.LineBasicMaterial({color:0x4c6d94,transparent:true,opacity:.32}));this.lines.push(line);this.scene.add(line);
+ this.createOrbitVisual(p.id,orbit);
  });
  window.addEventListener('keydown',this.onKeyDown);this.renderer.domElement.addEventListener('pointerdown',this.onDown);this.renderer.domElement.addEventListener('pointerup',this.onUp);
  this.observer=new ResizeObserver(()=>{const w=host.clientWidth,h=host.clientHeight;if(w&&h){this.camera.aspect=w/h;this.camera.updateProjectionMatrix();this.renderer!.setSize(w,h);}});this.observer.observe(host);this.overviewActive=true;this.startFlight(new THREE.Vector3(0,155,215),new THREE.Vector3(),true);this.applyQuality();this.frame=requestAnimationFrame(this.renderFrame);void this.loadEphemeris(this.simulationDate);fetch('http://localhost:8080/api/planets').then(response=>response.ok?response.json():Promise.reject('Backend offline')).then((data:Planet[])=>{if(data.length===8)this.planets=data;}).catch(()=>{console.info('OrbitLab: backend unavailable, using local planet catalog');});
+ }
+ private createStarField(){
+  // Stylized distance-layered stars: subtle independent scintillation, not actual atmospheric twinkling in space.
+  const count=3500,positions=new Float32Array(count*3),colors=new Float32Array(count*3);
+  const sizes=new Float32Array(count),phases=new Float32Array(count),rates=new Float32Array(count);
+  const color=new THREE.Color();
+  for(let i=0;i<count;i++){
+   const azimuth=Math.random()*Math.PI*2,latitude=Math.asin(2*Math.random()-1);
+   const radius=570+Math.random()*500;
+   positions[i*3]=Math.cos(latitude)*Math.cos(azimuth)*radius;
+   positions[i*3+1]=Math.sin(latitude)*radius;
+   positions[i*3+2]=Math.cos(latitude)*Math.sin(azimuth)*radius;
+   const tint=Math.random();
+   color.set(tint<.68?0xe9f2ff:tint<.85?0xffedd1:tint<.96?0xbad6ff:0xffd2ad);
+   colors[i*3]=color.r;colors[i*3+1]=color.g;colors[i*3+2]=color.b;
+   const prominent=Math.random()<.035;
+   sizes[i]=prominent?2.9+Math.random()*2.1:.85+Math.random()*1.5;
+   phases[i]=Math.random()*Math.PI*2;
+   rates[i]=.35+Math.random()*1.1;
+  }
+  const geometry=new THREE.BufferGeometry();
+  geometry.setAttribute('position',new THREE.BufferAttribute(positions,3));
+  geometry.setAttribute('color',new THREE.BufferAttribute(colors,3));
+  geometry.setAttribute('aSize',new THREE.BufferAttribute(sizes,1));
+  geometry.setAttribute('aPhase',new THREE.BufferAttribute(phases,1));
+  geometry.setAttribute('aRate',new THREE.BufferAttribute(rates,1));
+  const material=new THREE.ShaderMaterial({
+   uniforms:this.starUniforms,vertexColors:true,transparent:true,depthWrite:false,depthTest:false,
+   blending:THREE.AdditiveBlending,
+   vertexShader:`
+    uniform float uTime;uniform float uPixelRatio;uniform float uBrightness;
+    attribute float aSize;attribute float aPhase;attribute float aRate;
+    varying vec3 vColor;varying float vLight;
+    void main(){
+      vec4 mv=modelViewMatrix*vec4(position,1.0);
+      // Independent slow brightness changes: within roughly 12 percent.
+      float flicker=.91+.09*sin(uTime*aRate+aPhase);
+      vLight=flicker*uBrightness;
+      vColor=color;
+      gl_PointSize=clamp(aSize*uPixelRatio,1.0,8.0);
+      gl_Position=projectionMatrix*mv;
+    }
+   `,
+   fragmentShader:`
+    varying vec3 vColor;varying float vLight;
+    void main(){
+      float r=length(gl_PointCoord-vec2(.5))*2.0;
+      float core=1.0-smoothstep(.04,.36,r);
+      float glow=(1.0-smoothstep(.15,1.0,r))*.25;
+      float alpha=(core+glow)*vLight*.8;
+      if(alpha<.012)discard;
+      gl_FragColor=vec4(vColor,alpha);
+    }
+   `
+  });
+  this.starField=new THREE.Points(geometry,material);
+  this.starField.frustumCulled=false;
+  this.scene.add(this.starField);
+ }
+ private createOrbitVisual(id:string,radius:number){
+  const segments=320;
+  const points=Array.from({length:segments},(_,j)=>{
+   const a=j/segments*Math.PI*2;
+   return new THREE.Vector3(Math.cos(a)*radius,0,Math.sin(a)*radius);
+  });
+  const curve=new THREE.CatmullRomCurve3(points,true,'centripetal');
+  const core=new THREE.LineLoop(
+   new THREE.BufferGeometry().setFromPoints(points),
+   new THREE.LineBasicMaterial({color:0x9dccf4,transparent:true,opacity:.42,depthWrite:false})
+  );
+  const glow=new THREE.Mesh(
+   new THREE.TubeGeometry(curve,segments,.12,4,true),
+   new THREE.MeshBasicMaterial({color:0x62baff,transparent:true,opacity:.095,depthWrite:false,blending:THREE.AdditiveBlending,side:THREE.DoubleSide})
+  );
+  const halo=new THREE.Mesh(
+   new THREE.TubeGeometry(curve,segments,.35,3,true),
+   new THREE.MeshBasicMaterial({color:0x80c5ff,transparent:true,opacity:.04,depthWrite:false,blending:THREE.AdditiveBlending,side:THREE.DoubleSide})
+  );
+  this.lines.push(core);
+  this.orbitLayers.push({id,core,glow,halo});
+  this.scene.add(core,glow,halo);
  }
  setQuality(event:Event){
  const value=(event.target as HTMLSelectElement).value;
@@ -98,6 +180,9 @@ export class AppComponent implements AfterViewInit,OnDestroy{
  if(!this.renderer)return;
  const ratio=this.renderQuality==='low'?1:this.renderQuality==='balanced'?1.5:2;
  this.renderer.setPixelRatio(Math.min(window.devicePixelRatio||1,ratio));
+ this.starUniforms.uPixelRatio.value=this.renderer.getPixelRatio();
+ this.starUniforms.uBrightness.value=this.renderQuality==='low'?.78:this.renderQuality==='balanced'?1:1.16;
+ for(const layer of this.orbitLayers){layer.glow.visible=this.renderQuality!=='low';layer.halo.visible=this.renderQuality==='high';}
  for(const w of this.worlds){
   w.cloud && (w.cloud.visible=this.renderQuality!=='low' && !!(w.cloud.material as THREE.MeshStandardMaterial).map);
  }
@@ -186,7 +271,16 @@ export class AppComponent implements AfterViewInit,OnDestroy{
  }
  for(const w of this.worlds){w.mesh.rotation.y+=dt*.014;if(w.cloud)w.cloud.rotation.y+=dt*.022;}
  const earth=this.worlds.find(w=>w.p.id==='earth');if(earth){const sun=earth.group.position.clone().negate().normalize();this.earthShader?.uniforms['lightDirection'].value.copy(sun);const atmospheric=earth.group.children.find(x=>x!==earth.mesh&&x!==earth.cloud&&x instanceof THREE.Mesh&&x.material instanceof THREE.ShaderMaterial) as THREE.Mesh|undefined;if(atmospheric)(atmospheric.material as THREE.ShaderMaterial).uniforms['lightDirection'].value.copy(sun);}
- this.lines.forEach(line=>line.visible=this.showOrbits);
+ this.starUniforms.uTime.value=now*.001;
+ for(const layer of this.orbitLayers){
+  const selected=layer.id===this.selected;
+  layer.core.visible=this.showOrbits;
+  layer.glow.visible=this.showOrbits && this.renderQuality!=='low';
+  layer.halo.visible=this.showOrbits && this.renderQuality==='high';
+  (layer.core.material as THREE.LineBasicMaterial).opacity=selected?.77:.42;
+  (layer.glow.material as THREE.MeshBasicMaterial).opacity=selected?.19:.095;
+  (layer.halo.material as THREE.MeshBasicMaterial).opacity=selected?.085:.04;
+ }
  const current=this.worlds.find(w=>w.p.id===this.selected);
  if(this.controls){
   if(this.flight){
