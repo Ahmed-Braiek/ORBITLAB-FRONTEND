@@ -3,3 +3,32 @@
 /* Keep ASTRA launcher clear of the right planet details/action buttons. */
 @media(min-width:901px){.astra-launch{right:calc(4% + min(320px,24vw) + 15px)}}
 @media(min-width:651px) and (max-width:900px){.astra-launch{right:calc(3% + min(250px,33vw) + 12px)}}
+
+/* ASTRA: header beacon + non-obscuring desktop side-drawer */
+:host{--astra-side-width:clamp(320px,29vw,430px)}
+.astra-launch{
+ top:14px;right:4%;bottom:auto;height:45px;min-height:45px;z-index:35;
+ border-radius:12px;background:#112b4a;border-color:#76b6f28a;
+ box-shadow:0 0 0 1px #17416f6b,0 0 13px #2078d433;
+ animation:astraBeacon 5.5s ease-in-out infinite
+}
+@keyframes astraBeacon{
+ 0%,12%{box-shadow:0 0 0 1px #80caff,0 0 23px #50b8ffa0;background:#1b5286;border-color:#d1efff}
+ 17%,88%{box-shadow:0 0 0 1px #17416f6b,0 0 5px #16446d22;background:#112b4a;border-color:#76b6f28a}
+ 95%,100%{box-shadow:0 0 0 1px #80caff,0 0 23px #50b8ffa0;background:#1b5286;border-color:#d1efff}
+}
+.astra-launch-glow{animation:none;border-color:transparent}
+.astra-panel{
+ position:absolute;top:74px;right:0;bottom:var(--orbit-dock-height,112px);
+ width:clamp(320px,29vw,430px);height:auto;min-height:0;z-index:26;
+ border-radius:0;border-top:0;border-right:0;border-bottom:0;
+ animation:astraEnter .28s ease-out
+}
+@media(min-width:901px){.astra-launch{right:4%}}
+@media(min-width:651px) and (max-width:900px){.astra-launch{right:3%}}
+@media(max-width:650px){
+ .astra-launch{top:15px;right:9px;bottom:auto;height:43px;min-height:43px;padding:5px 10px}
+ .astra-launch>span:nth-child(2){font-size:9px}
+ .astra-panel{top:74px;right:0;bottom:var(--orbit-dock-height,140px);width:100vw;height:auto;min-height:0}
+}
+@media(prefers-reduced-motion:reduce){.astra-launch{animation:none}}

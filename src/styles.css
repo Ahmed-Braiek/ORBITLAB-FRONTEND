@@ -121,3 +121,13 @@ footer{
  .asteroid-data{bottom:calc(var(--orbit-dock-height) + 5px);left:10px;right:10px;max-height:45vh}
 }
 @media(max-width:390px){:root{--orbit-dock-height:174px}.controls{gap:3px 4px}}
+
+/* Reserve a dedicated rendering viewport whenever ASTRA is open. */
+.shell{--astra-side-width:clamp(320px,29vw,430px)}
+.viewport{transition:right .28s ease;right:0}
+.shell.astra-open .viewport{right:var(--astra-side-width)}
+.shell.astra-open aside{display:none}
+.shell.astra-open .performance-hud{right:calc(var(--astra-side-width) + 14px)}
+.shell header .status{margin-right:165px}
+@media(max-width:900px){.shell header .status{display:none}}
+@media(max-width:650px){.shell.astra-open .viewport{right:0;opacity:.4;pointer-events:none}.shell.astra-open .intro{display:none}}

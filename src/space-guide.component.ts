@@ -14,7 +14,7 @@ type Turn={role:'user'|'assistant';text:string;html:string;sources:Source[];plan
   <span class="astra-launch-glyph">✦</span><span>{{open?'CLOSE GUIDE':'ASK ASTRA'}}</span><span class="astra-launch-glow"></span>
  </button>
  <section class="astra-panel" *ngIf="open" aria-label="OrbitLab space guide" role="dialog">
-  <header class="astra-header"><div class="astra-avatar">✦</div><div><div class="astra-name">ASTRA <span>SPACE GUIDE</span></div><div class="astra-status"><span class="astra-led"></span>{{configured===false?'API KEY REQUIRED':'GEMINI · SPACE-ONLY ASSISTANT'}}</div></div><button class="astra-close" (click)="open=false" aria-label="Close chat">✕</button></header>
+  <header class="astra-header"><div class="astra-avatar">✦</div><div><div class="astra-name">ASTRA <span>SPACE GUIDE</span></div><div class="astra-status"><span class="astra-led"></span>{{configured===false?'API KEY REQUIRED':'GEMINI · SPACE-ONLY ASSISTANT'}}</div></div><button class="astra-close" (click)="setOpen(false)" aria-label="Close chat">✕</button></header>
   <div class="astra-body" #historyPanel>
    <div class="astra-welcome" *ngIf="messages.length===0">
     <div class="astra-planet">✺</div><div class="astra-kicker">YOUR INTERACTIVE SPACE COMPANION</div>
@@ -48,6 +48,7 @@ type Turn={role:'user'|'assistant';text:string;html:string;sources:Source[];plan
 export class SpaceGuideComponent implements OnInit,OnDestroy {
  @Input() selectedPlanet='earth';
  @Output() navigatePlanet=new EventEmitter<string>();
+ @Output() openChange=new EventEmitter<boolean>();
  open=false;loading=false;draft='';error='';configured:boolean|null=null;
  messages:Turn[]=[];
  private timer?:ReturnType<typeof setInterval>;
@@ -57,12 +58,13 @@ export class SpaceGuideComponent implements OnInit,OnDestroy {
   catch{this.error='Spring Boot is offline. Start the backend at localhost:8080.';}
  }
  ngOnDestroy(){if(this.timer)clearInterval(this.timer);}
- toggle(){this.open=!this.open;}
+ toggle(){this.setOpen(!this.open);}
+ setOpen(value:boolean){this.open=value;this.openChange.emit(value);}
  readValue(e:Event){return (e.target as HTMLTextAreaElement).value;}
  keyDown(e:KeyboardEvent){if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();void this.send();}}
  submit(e:Event){e.preventDefault();void this.send();}
  sendSuggestion(q:string){this.draft=q;void this.send();}
- goTo(id:string){if(!['mercury','venus','earth','mars','jupiter','saturn','uranus','neptune'].includes(id))return;this.navigatePlanet.emit(id);this.open=false;}
+ goTo(id:string){if(!['mercury','venus','earth','mars','jupiter','saturn','uranus','neptune'].includes(id))return;this.navigatePlanet.emit(id);this.setOpen(false);}
  private render(text:string):string{
   const html=marked.parse(text,{async:false,breaks:true,gfm:true}) as string;
   return DOMPurify.sanitize(html,{USE_PROFILES:{html:true},FORBID_TAGS:['style','iframe','form','button','input','svg','math']});
@@ -88,7 +90,12 @@ export class SpaceGuideComponent implements OnInit,OnDestroy {
    if(!res.ok){
     if(res.status===503)throw Error('Gemini is not configured. Set GEMINI_API_KEY in Spring Boot and restart it.');
     if(res.status===429)throw Error('Gemini free-tier or local demo limit reached. Try again shortly.');
-    throw Error('Space Guide unavailable (HTTP '+res.status+'). Check the backend and Gemini settings.');
+    let reason='';
+    try {
+      const payload=await res.json() as {detail?:string;message?:string;error?:string};
+      reason=payload.detail||payload.message||'';
+    }catch{}
+    throw Error(reason||('Space Guide unavailable (HTTP '+res.status+'). Check the backend and Gemini settings.'));
    }
    const body=await res.json() as GuideResponse;
    const turn:Turn={role:'assistant',text:body.answer,html:'',sources:body.sources??[],planet:body.navigatePlanet,complete:false};
