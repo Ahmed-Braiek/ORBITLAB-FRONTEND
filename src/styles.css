@@ -24,3 +24,100 @@ footer{bottom:9px;pointer-events:none}.status{white-space:nowrap}
 .quality-label{display:flex;align-items:center;gap:7px;font-size:9px;letter-spacing:1px;color:#9fb6d2}.quality-label select{max-width:113px;padding:7px;border:1px solid #5b7a9c88;color:#d9ecff;background:#0c1a2c;color-scheme:dark;font:600 10px 'DM Sans'}
 @media(max-width:1050px){.performance-hud{left:auto;right:4%;top:80px}.controls{overflow-x:auto;flex-wrap:nowrap;justify-content:flex-start;width:min(95vw,960px);scrollbar-width:thin}.controls button{flex-shrink:0}}
 @media(max-width:750px){.performance-hud{right:12px;top:78px;padding:5px}.quality-label{flex-shrink:0}}
+
+
+/* Phase 8b responsive layout repair: real docked toolbar + always accessible actions.
+   Intentionally overrides historical phase rules without modifying WebGL canvas. */
+:root{--orbit-dock-height:112px;--orbit-safe-gap:14px}
+.shell{height:100dvh;min-height:0;overflow:hidden}
+header{height:74px}
+.performance-hud{top:84px;left:auto;right:4%;z-index:4}
+.intro{
+ top:122px;left:4%;width:min(310px,26vw);
+ max-height:calc(100dvh - var(--orbit-dock-height) - 142px);
+ overflow-y:auto;overflow-x:hidden;scrollbar-width:thin;scrollbar-color:#6a91bd55 transparent;
+ padding:7px 12px 10px 0;pointer-events:auto
+}
+.intro h1{font-size:clamp(29px,3.05vw,48px);line-height:1.04;margin:12px 0}
+.intro p{margin:10px 0;font-size:11px}
+.planet-list{margin-top:14px;width:min(230px,100%)}
+.planet-list button{min-height:36px;padding:7px 10px}
+aside{
+ top:144px;bottom:calc(var(--orbit-dock-height) + var(--orbit-safe-gap));
+ right:4%;width:min(320px,24vw);height:auto;max-height:none;
+ overflow-y:auto;overflow-x:hidden;overscroll-behavior:contain;
+ padding:20px;scrollbar-width:thin;scrollbar-color:#6a91bd55 transparent
+}
+aside h2{margin:15px 0 10px;font-size:clamp(23px,2vw,33px)}
+aside p{margin:10px 0 12px}
+.stat{padding:12px 0}
+.next,.obs-open{min-height:42px;position:relative;display:block}
+.notice{margin-top:10px;font-size:9px;line-height:1.4}
+.controls{
+ position:absolute;z-index:8;left:0;right:0;bottom:0;transform:none;
+ width:100%;max-width:none;height:var(--orbit-dock-height);
+ border:0;border-top:1px solid #749bc23e;border-radius:0;
+ background:linear-gradient(180deg,#0a1626f7,#050e1efc);
+ backdrop-filter:blur(22px);box-shadow:0 -15px 40px #0207148a;
+ padding:12px max(18px,4vw) 31px;
+ display:flex;flex-wrap:wrap;align-content:center;align-items:center;
+ justify-content:center;gap:7px 11px;overflow:visible;white-space:nowrap
+}
+.controls button{
+ flex:0 0 auto;white-space:nowrap;min-height:32px;padding:7px 10px;
+ border:1px solid #55799a32;border-radius:4px;
+ font-size:10px;letter-spacing:.12px
+}
+.controls button:hover,.controls button.active{border-color:#72aedb8c}
+.controls button.dock-observatory{border-color:#d2a85477;color:#f1d394;background:#caa14a12}
+.controls button.dock-observatory:hover{background:#caa14a33}
+.controls span{margin:0 4px}
+.quality-label{flex:0 0 auto;gap:6px}
+.quality-label select,.controls input[type=date]{min-height:32px}
+footer{
+ bottom:calc(var(--orbit-dock-height) + 5px);left:4%;
+ z-index:3;max-width:calc(100% - 8%);font-size:8px;
+ padding:4px 8px;letter-spacing:.5px
+}
+.asteroid-data{bottom:calc(var(--orbit-dock-height) + 14px);z-index:9}
+.observatory-panel{bottom:calc(var(--orbit-dock-height) + 6px)}
+@media(max-height:720px){
+ :root{--orbit-dock-height:116px}
+ .intro{top:113px;max-height:calc(100dvh - var(--orbit-dock-height) - 124px)}
+ aside{top:118px;padding:14px}
+ aside h2{margin:8px 0}
+ aside p{margin:6px 0}
+ .stat{padding:8px 0}
+ .controls{padding-bottom:23px;gap:4px 8px}
+}
+@media(max-width:1100px){
+ .intro{width:min(255px,32vw)}
+ aside{width:min(270px,28vw);right:2%}
+ .controls{gap:5px 7px;padding-left:18px;padding-right:18px}
+ .controls button{padding:6px 8px}
+}
+@media(max-width:900px){
+ :root{--orbit-dock-height:126px}
+ .controls{width:100%;max-width:none;bottom:0;overflow:visible;flex-wrap:wrap;justify-content:center}
+ .performance-hud{top:83px;right:3%}
+ .intro{width:min(240px,37vw);left:3%}
+ aside{display:block;width:min(250px,33vw);right:3%}
+}
+@media(max-width:650px){
+ :root{--orbit-dock-height:140px}
+ .status{display:none}
+ .intro{top:106px;left:12px;width:min(195px,48vw);max-height:calc(100dvh - var(--orbit-dock-height) - 118px)}
+ .intro h1{font-size:25px}
+ .intro p{display:none}
+ .planet-list button{min-height:30px;padding:5px 7px;font-size:12px}
+ aside{display:none}
+ .performance-hud{top:79px;right:10px}
+ .controls{height:var(--orbit-dock-height);padding:8px 10px 22px;gap:4px 5px}
+ .controls button{font-size:9px;min-height:29px;padding:5px 6px}
+ .controls input[type=date],.quality-label select{min-height:29px;padding:4px;font-size:9px}
+ .quality-label{font-size:8px}
+ footer{display:none}
+ .observatory-panel{top:76px;right:0;bottom:var(--orbit-dock-height);width:100vw}
+ .asteroid-data{bottom:calc(var(--orbit-dock-height) + 5px);left:10px;right:10px;max-height:45vh}
+}
+@media(max-width:390px){:root{--orbit-dock-height:174px}.controls{gap:3px 4px}}
