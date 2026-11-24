@@ -28,7 +28,17 @@
                 "input": "public",
                 "output": "/"
               }
-            ]
+            ],
+            "optimization": {
+              "scripts": true,
+              "styles": {
+                "minify": true,
+                "inlineCritical": true
+              },
+              "fonts": {
+                "inline": false
+              }
+            }
           }
         },
         "serve": {
