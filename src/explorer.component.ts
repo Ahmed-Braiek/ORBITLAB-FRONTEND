@@ -17,7 +17,7 @@ const planets:Planet[]=[
 {id:'neptune',name:'Neptune',radiusKm:24622,meanDistanceAu:30.07,orbitalPeriodDays:60182,description:'A distant blue world with powerful winds.'}
 ];
 @Component({selector:'app-root',standalone:true,imports:[CommonModule],template:`
-<div class="shell"><header><div class="logo">✦ ORBIT<span>LAB</span> <small>EXPLORER / 04</small></div><div class="status">● LOCAL RENDER ENGINE / SOL SYSTEM</div></header>
+<div class="shell"><header><div class="logo">✦ ORBIT<span>LAB</span> <small>EXPLORER / 05</small></div><div class="status">● LOCAL RENDER ENGINE / SOL SYSTEM</div></header>
 <div #viewport class="viewport"></div>
 <nav class="intro"><div class="eyebrow">IMMERSIVE SPACE EXPLORATION</div><h1>BEYOND<br><i>THE HORIZON.</i></h1><p>Travel between worlds. Explore the Solar System.</p><div class="planet-list"><button *ngFor="let p of planets;index as i" [class.active]="selected===p.id" (click)="focus(p.id)"><span class="index">{{i+1}}</span>{{p.name}}<span class="arrow">↗</span></button></div></nav>
 <aside><small>NOW EXPLORING / {{planetIndex+1}} OF 8</small><h2>{{active.name | uppercase}}</h2><p>{{active.description}}</p><div class="stat"><span>MEAN RADIUS</span><b>{{active.radiusKm | number}} km</b></div><div class="stat"><span>MEAN SOLAR DISTANCE</span><b>{{active.meanDistanceAu}} AU</b></div><div class="stat"><span>ORBITAL PERIOD</span><b>{{active.orbitalPeriodDays | number}} days</b></div><button class="next" (click)="focus(planets[(planetIndex+1)%8].id)">NEXT DESTINATION ↗</button><div class="notice">{{textureStatus}}</div></aside>
@@ -29,7 +29,7 @@ export class AppComponent implements AfterViewInit,OnDestroy{
  private scene=new THREE.Scene();private camera=new THREE.PerspectiveCamera(48,1,.1,3000);private renderer?:THREE.WebGLRenderer;private controls?:OrbitControls;private frame=0;private observer?:ResizeObserver;private last=0;
  private worlds:{p:Planet,mesh:THREE.Mesh,group:THREE.Group,orbit:number,radius:number,angle:number,cloud?:THREE.Mesh}[]=[];private lines:THREE.LineLoop[]=[];
  private travelTarget=new THREE.Vector3();private travelOffset=new THREE.Vector3(12,6,18);private overviewActive=false;private flight?:{elapsed:number,duration:number,fromPos:THREE.Vector3,fromTarget:THREE.Vector3,toPos:THREE.Vector3,toTarget:THREE.Vector3};private followedPosition=new THREE.Vector3();private textures:THREE.Texture[]=[];private down={x:0,y:0};
- private pointer=new THREE.Vector2();private ray=new THREE.Raycaster();
+ private pointer=new THREE.Vector2();private ray=new THREE.Raycaster();private earthNight?:THREE.Texture;private earthShader?:THREE.ShaderMaterial;private ringTexture?:THREE.Texture;
  ngAfterViewInit(){
  const host=this.viewport.nativeElement;
  this.renderer=new THREE.WebGLRenderer({antialias:true,powerPreference:'high-performance',alpha:true});
@@ -37,27 +37,49 @@ export class AppComponent implements AfterViewInit,OnDestroy{
  this.renderer.toneMapping=THREE.ACESFilmicToneMapping;this.renderer.toneMappingExposure=1.4;host.appendChild(this.renderer.domElement);
  this.camera.position.set(30,18,40);this.controls=new OrbitControls(this.camera,this.renderer.domElement);
  this.controls.enableDamping=true;this.controls.dampingFactor=.055;this.controls.rotateSpeed=.55;this.controls.zoomSpeed=.85;this.controls.enablePan=false;this.controls.minPolarAngle=.08;this.controls.maxPolarAngle=Math.PI-.08;this.controls.minDistance=2;this.controls.maxDistance=500;this.controls.addEventListener('start',()=>{this.flight=undefined;this.controls!.enabled=true;});
- this.scene.add(new THREE.AmbientLight(0x8c9dc0,.18));
- this.scene.add(new THREE.PointLight(0xffe7c4,7000));
+ this.scene.add(new THREE.AmbientLight(0x8c9dc0,.07));
+ this.scene.add(new THREE.PointLight(0xffecd6,7000,0,1.3));
  this.scene.add(new THREE.Mesh(new THREE.SphereGeometry(5,64,48),new THREE.MeshBasicMaterial({color:0xffdb87})));
- const stars=new Float32Array(4500*3);for(let i=0;i<4500;i++){const a=Math.random()*6.283,u=Math.random()*2-1,r=600+Math.random()*600,k=Math.sqrt(1-u*u);stars[i*3]=r*k*Math.cos(a);stars[i*3+1]=r*u;stars[i*3+2]=r*k*Math.sin(a);}
+ const stars=new Float32Array(1800*3);for(let i=0;i<1800;i++){const a=Math.random()*6.283,u=Math.random()*2-1,r=600+Math.random()*600,k=Math.sqrt(1-u*u);stars[i*3]=r*k*Math.cos(a);stars[i*3+1]=r*u;stars[i*3+2]=r*k*Math.sin(a);}
  const starGeo=new THREE.BufferGeometry();starGeo.setAttribute('position',new THREE.BufferAttribute(stars,3));
- this.scene.add(new THREE.Points(starGeo,new THREE.PointsMaterial({color:0xcfe0ff,size:1.4,sizeAttenuation:false})));
+ this.scene.add(new THREE.Points(starGeo,new THREE.PointsMaterial({color:0xcfe0ff,size:1,sizeAttenuation:false,transparent:true,opacity:.58,depthWrite:false})));
  const loader=new THREE.TextureLoader();const colors=[0xada69c,0xdfbe8c,0xffffff,0xbb7052,0xd3b18e,0xcdbb91,0x8fd5df,0x4e83d5];let loaded=0;
  planets.forEach((p,i)=>{
  const orbit=14+Math.pow(i+1,1.38)*9;const radius=Math.min(7,Math.max(1.4,Math.pow(p.radiusKm/6371,.42)*2.4));
  const group=new THREE.Group();this.scene.add(group);
  const mat=new THREE.MeshStandardMaterial({color:colors[i],roughness:1});
- const mesh=new THREE.Mesh(new THREE.SphereGeometry(radius,96,64),mat);group.add(mesh);
- const world={p,group,mesh,orbit,radius,angle:1.5+i*2.35} as {p:Planet,group:THREE.Group,mesh:THREE.Mesh,orbit:number,radius:number,angle:number,cloud?:THREE.Mesh};this.worlds.push(world);
- loader.load('/textures/'+p.id+'.jpg',tex=>{tex.colorSpace=THREE.SRGBColorSpace;tex.anisotropy=Math.min(8,this.renderer!.capabilities.getMaxAnisotropy());mat.map=tex;mat.color.set(0xffffff);mat.needsUpdate=true;this.textures.push(tex);loaded++;this.textureStatus='LOCAL PLANET TEXTURES '+loaded+'/8';},undefined,()=>{this.textureStatus='MAPS NOT INSTALLED: RUN npm run assets:download';});
  if(p.id==='earth'){
- const cloudsMat=new THREE.MeshStandardMaterial({transparent:true,opacity:.3,depthWrite:false,roughness:1});
- const clouds=new THREE.Mesh(new THREE.SphereGeometry(radius*1.012,72,48),cloudsMat);group.add(clouds);world.cloud=clouds;
- loader.load('/textures/earth-clouds.jpg',tex=>{tex.colorSpace=THREE.SRGBColorSpace;cloudsMat.map=tex;cloudsMat.alphaMap=tex;cloudsMat.needsUpdate=true;this.textures.push(tex);},undefined,()=>{clouds.visible=false;});
- const atmos=new THREE.Mesh(new THREE.SphereGeometry(radius*1.09,72,48),new THREE.ShaderMaterial({side:THREE.BackSide,transparent:true,depthWrite:false,blending:THREE.AdditiveBlending,vertexShader:'varying vec3 n;varying vec3 eye;void main(){vec4 p=modelViewMatrix*vec4(position,1.);n=normalize(normalMatrix*normal);eye=normalize(-p.xyz);gl_Position=projectionMatrix*p;}',fragmentShader:'varying vec3 n;varying vec3 eye;void main(){float a=pow(1.-abs(dot(normalize(n),normalize(eye))),3.4);gl_FragColor=vec4(.14,.43,.9,a*.64);}'}));group.add(atmos);
+ this.earthShader=new THREE.ShaderMaterial({
+  uniforms:{day:{value:null},night:{value:null},hasNight:{value:0},lightDirection:{value:new THREE.Vector3(1,0,0)}},
+  vertexShader:'varying vec2 texUv;varying vec3 wn;void main(){texUv=uv;wn=normalize(mat3(modelMatrix)*normal);gl_Position=projectionMatrix*modelViewMatrix*vec4(position,1.);}',
+  fragmentShader:'uniform sampler2D day;uniform sampler2D night;uniform float hasNight;uniform vec3 lightDirection;varying vec2 texUv;varying vec3 wn;void main(){float cosA=dot(normalize(wn),normalize(lightDirection));float blend=smoothstep(-.12,.17,cosA);vec3 d=texture2D(day,texUv).rgb*(.13+.92*max(0.,cosA));vec3 n=hasNight>0.5?texture2D(night,texUv).rgb*.9:d*.045;gl_FragColor=vec4(mix(n,d,blend),1.);}'
+ });
+}
+ const mesh=new THREE.Mesh(new THREE.SphereGeometry(radius,96,64),p.id==='earth'?this.earthShader!:mat);group.add(mesh);
+ const world={p,group,mesh,orbit,radius,angle:1.5+i*2.35} as {p:Planet,group:THREE.Group,mesh:THREE.Mesh,orbit:number,radius:number,angle:number,cloud?:THREE.Mesh};this.worlds.push(world);
+ loader.load('/textures/'+p.id+'.jpg',tex=>{tex.colorSpace=THREE.SRGBColorSpace;tex.anisotropy=Math.min(8,this.renderer!.capabilities.getMaxAnisotropy());if(p.id==='earth'){this.earthShader!.uniforms['day'].value=tex;}else{mat.map=tex;mat.color.set(0xffffff);mat.needsUpdate=true;}this.textures.push(tex);loaded++;this.textureStatus='LOCAL PLANET TEXTURES '+loaded+'/8';},undefined,()=>{this.textureStatus='MAPS NOT INSTALLED: RUN npm run assets:download';});
+ if(p.id==='earth'){
+ const cloudMat=new THREE.MeshStandardMaterial({transparent:true,opacity:.26,depthWrite:false,roughness:1});
+ const cloud=new THREE.Mesh(new THREE.SphereGeometry(radius*1.018,80,56),cloudMat);group.add(cloud);world.cloud=cloud;
+ loader.load('/textures/earth-clouds.jpg',tex=>{tex.colorSpace=THREE.SRGBColorSpace;cloudMat.map=tex;cloudMat.alphaMap=tex;cloudMat.needsUpdate=true;this.textures.push(tex);},undefined,()=>{cloud.visible=false;});
+ loader.load('/textures/earth-night.jpg',tex=>{tex.colorSpace=THREE.SRGBColorSpace;this.earthNight=tex;this.earthShader!.uniforms['night'].value=tex;this.earthShader!.uniforms['hasNight'].value=1;this.textures.push(tex);},undefined,()=>console.info('Optional night map missing'));
+ const atmosphereMat=new THREE.ShaderMaterial({
+  side:THREE.BackSide,transparent:true,depthWrite:false,blending:THREE.AdditiveBlending,
+  uniforms:{lightDirection:{value:new THREE.Vector3(1,0,0)}},
+  vertexShader:'varying vec3 normalW;varying vec3 eyeW;void main(){vec4 world=modelMatrix*vec4(position,1.);normalW=normalize(mat3(modelMatrix)*normal);eyeW=normalize(cameraPosition-world.xyz);gl_Position=projectionMatrix*viewMatrix*world;}',
+  fragmentShader:'uniform vec3 lightDirection;varying vec3 normalW;varying vec3 eyeW;void main(){vec3 n=normalize(normalW);float rim=pow(1.-abs(dot(n,normalize(eyeW))),3.5);float sun=smoothstep(-.25,.5,dot(n,normalize(lightDirection)));gl_FragColor=vec4(.18,.49,1.,rim*(.07+.48*sun));}'
+ });group.add(new THREE.Mesh(new THREE.SphereGeometry(radius*1.075,80,56),atmosphereMat));
  }
- if(p.id==='saturn'){const ring=new THREE.Mesh(new THREE.RingGeometry(radius*1.3,radius*2.4,160),new THREE.MeshBasicMaterial({color:0xe0cda8,transparent:true,opacity:.78,side:THREE.DoubleSide}));ring.rotation.x=-Math.PI/2.2;group.add(ring);}
+ if(p.id==='saturn'){
+ const canvas=document.createElement('canvas');canvas.width=1024;canvas.height=4;const ctx=canvas.getContext('2d')!;
+ const data=ctx.createImageData(1024,4);
+ for(let x=0;x<1024;x++){const u=x/1023;const band=Math.abs(Math.sin(u*88)+.4*Math.sin(u*271));const gap=(u>.50&&u<.59)?.07:1;const fade=Math.min(1,u*15,(1-u)*15);for(let y=0;y<4;y++){const k=(y*1024+x)*4;data.data[k]=207;data.data[k+1]=188;data.data[k+2]=154;data.data[k+3]=Math.round((78+band*80)*gap*fade);}}ctx.putImageData(data,0,0);
+ const ringTex=new THREE.CanvasTexture(canvas);ringTex.colorSpace=THREE.SRGBColorSpace;this.ringTexture=ringTex;
+ const geo=new THREE.RingGeometry(radius*1.25,radius*2.45,256);
+ const uv=geo.getAttribute('uv'),pos=geo.getAttribute('position');
+ for(let k=0;k<uv.count;k++){const d=Math.hypot(pos.getX(k),pos.getY(k))/radius;uv.setXY(k,(d-1.25)/1.2,.5);}uv.needsUpdate=true;
+ const ring=new THREE.Mesh(geo,new THREE.MeshBasicMaterial({map:ringTex,side:THREE.DoubleSide,transparent:true,depthWrite:false}));ring.rotation.x=-Math.PI/2;ring.rotation.z=.28;group.add(ring);
+ }
  const points=Array.from({length:256},(_,j)=>{const a=j/256*6.283185;return new THREE.Vector3(Math.cos(a)*orbit,0,Math.sin(a)*orbit);});
  const line=new THREE.LineLoop(new THREE.BufferGeometry().setFromPoints(points),new THREE.LineBasicMaterial({color:0x4c6d94,transparent:true,opacity:.32}));this.lines.push(line);this.scene.add(line);
  });
@@ -138,7 +160,8 @@ export class AppComponent implements AfterViewInit,OnDestroy{
  }else{
   for(const w of this.worlds){w.angle+=dt*this.speed*90/w.p.orbitalPeriodDays;w.group.position.set(Math.cos(w.angle)*w.orbit,0,Math.sin(w.angle)*w.orbit);}
  }
- for(const w of this.worlds){w.mesh.rotation.y+=dt*.04;if(w.cloud)w.cloud.rotation.y+=dt*.06;}
+ for(const w of this.worlds){w.mesh.rotation.y+=dt*.014;if(w.cloud)w.cloud.rotation.y+=dt*.022;}
+ const earth=this.worlds.find(w=>w.p.id==='earth');if(earth){const sun=earth.group.position.clone().negate().normalize();this.earthShader?.uniforms['lightDirection'].value.copy(sun);const atmospheric=earth.group.children.find(x=>x!==earth.mesh&&x!==earth.cloud&&x instanceof THREE.Mesh&&x.material instanceof THREE.ShaderMaterial) as THREE.Mesh|undefined;if(atmospheric)(atmospheric.material as THREE.ShaderMaterial).uniforms['lightDirection'].value.copy(sun);}
  this.lines.forEach(line=>line.visible=!this.ephemerisReady&&this.showOrbits);
  const current=this.worlds.find(w=>w.p.id===this.selected);
  if(this.controls){
@@ -158,5 +181,5 @@ export class AppComponent implements AfterViewInit,OnDestroy{
   this.controls.update(dt);
  }
  this.renderer?.render(this.scene,this.camera);this.frame=requestAnimationFrame(this.renderFrame);};
- ngOnDestroy(){cancelAnimationFrame(this.frame);this.observer?.disconnect();this.renderer?.domElement.removeEventListener('pointerdown',this.onDown);this.renderer?.domElement.removeEventListener('pointerup',this.onUp);this.controls?.dispose();this.scene.traverse(o=>{const m=o as THREE.Mesh;m.geometry?.dispose();if(m.material)(Array.isArray(m.material)?m.material:[m.material]).forEach(x=>x.dispose());});this.textures.forEach(x=>x.dispose());this.renderer?.dispose();}
+ ngOnDestroy(){cancelAnimationFrame(this.frame);this.observer?.disconnect();this.renderer?.domElement.removeEventListener('pointerdown',this.onDown);this.renderer?.domElement.removeEventListener('pointerup',this.onUp);this.controls?.dispose();this.scene.traverse(o=>{const m=o as THREE.Mesh;m.geometry?.dispose();if(m.material)(Array.isArray(m.material)?m.material:[m.material]).forEach(x=>x.dispose());});this.textures.forEach(x=>x.dispose());this.ringTexture?.dispose();this.renderer?.dispose();}
 }

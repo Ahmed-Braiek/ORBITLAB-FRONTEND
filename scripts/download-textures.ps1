@@ -4,7 +4,7 @@ New-Item -ItemType Directory -Force -Path $folder | Out-Null
 $base = "https://www.solarsystemscope.com/textures/download"
 $maps = @{
   "mercury.jpg" = "2k_mercury.jpg";"venus.jpg" = "2k_venus_atmosphere.jpg";
-  "earth.jpg" = "2k_earth_daymap.jpg";"earth-clouds.jpg" = "2k_earth_clouds.jpg";
+  "earth.jpg" = "2k_earth_daymap.jpg";"earth-night.jpg" = "2k_earth_nightmap.jpg";"earth-clouds.jpg" = "2k_earth_clouds.jpg";
   "mars.jpg" = "2k_mars.jpg";"jupiter.jpg" = "2k_jupiter.jpg";
   "saturn.jpg" = "2k_saturn.jpg";"uranus.jpg" = "2k_uranus.jpg";
   "neptune.jpg" = "2k_neptune.jpg"
