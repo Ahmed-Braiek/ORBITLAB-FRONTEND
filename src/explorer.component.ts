@@ -77,7 +77,7 @@ export class AppComponent implements AfterViewInit,OnDestroy{
    this.updateWorldPositions();
   }catch(e){if(request!==this.requestCounter)return;this.ephemerisReady=false;this.scienceStatus='JPL UNAVAILABLE — ILLUSTRATIVE ORBITS (NOT SCIENTIFIC)';console.warn('OrbitLab Horizons error',e);}
  }
- setDate(event:Event){const input=event.target as HTMLInputElement;if(/^\\d{4}-\\d{2}-\\d{2}$/.test(input.value)){this.simulationDate=input.value;void this.loadEphemeris(input.value);}}
+ setDate(event:Event){const input=event.target as HTMLInputElement;if(/^\d{4}-\d{2}-\d{2}$/.test(input.value)){this.simulationDate=input.value;void this.loadEphemeris(input.value);}}
  changeDate(delta:number){
   const date=new Date(this.simulationDate+'T00:00:00Z');
   date.setUTCDate(date.getUTCDate()+delta);
