@@ -42,7 +42,7 @@ export class ObservatoryComponent implements OnInit{
   if(response.status===204)return undefined as T;
   return await response.json() as T;
  }
- async refresh(){try{this.error='';const [favorites,lists]=await Promise.all([this.request<Favorite[]>('/favorites'),this.request<ObservatoryList[]>('/lists')]);this.favorites=favorites;this.lists=lists;if(this.openListId)await this.selectList(this.openListId);}catch(e){this.error=String(e);}}
+ async refresh(){try{this.error='';const [favorites,lists]=await Promise.all([this.request<Favorite[]>('/favorites'),this.request<ObservatoryList[]>('/lists')]);this.favorites=favorites;this.lists=lists;if(this.openListId){this.entries=await this.request<ListEntry[]>('/lists/'+this.openListId+'/entries');}}catch(e){this.error=String(e);}}
  private async mutate(operation:()=>Promise<unknown>){this.busy=true;this.error='';this.notice='';try{await operation();await this.refresh();this.notice='Saved to local MySQL.';}catch(e){this.error=String(e);}finally{this.busy=false;}}
  async saveSelected(){if(this.isFavorite)return;await this.mutate(()=>this.request('/favorites','POST',{objectType:'planet',objectId:this.selectedId,displayName:this.selectedName}));}
  async removeFavorite(id:number){await this.mutate(()=>this.request('/favorites/'+id,'DELETE'));}
