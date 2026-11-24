@@ -32,3 +32,90 @@
  .astra-panel{top:74px;right:0;bottom:var(--orbit-dock-height,140px);width:100vw;height:auto;min-height:0}
 }
 @media(prefers-reduced-motion:reduce){.astra-launch{animation:none}}
+
+/* ASTRA readability pass: dedicated spacious reader rather than dense overlay. */
+:host{--astra-side-width:clamp(380px,33vw,500px)}
+.astra-panel{
+ width:var(--astra-side-width);max-width:100vw;
+ background:linear-gradient(180deg,#071629 0%,#071321 100%);
+ box-shadow:-16px 0 54px #0008;border-left:1px solid #78aeda4b;
+}
+.astra-header{height:68px;min-height:68px;padding:11px 19px;background:#0e233c;border-bottom-color:#7ba5d733}
+.astra-avatar{width:38px;height:38px}
+.astra-name{font-size:18px}
+.astra-status{font-size:10px;letter-spacing:.5px}
+.astra-close{display:grid;place-items:center;width:32px;height:32px;border:1px solid #8fb7db33;border-radius:8px;background:#1d39534a;color:#d1e9ff;transition:background .2s}
+.astra-close:hover{background:#335c7d98}
+.astra-body{
+ flex:1;min-height:0;overflow-y:auto;overflow-x:hidden;
+ overscroll-behavior:contain;
+ padding:22px 20px 25px;scrollbar-width:thin;
+ scrollbar-color:#6486a6a6 transparent;
+}
+.astra-message{max-width:100%;margin-bottom:19px}
+.astra-speaker{font-size:10px;letter-spacing:1.25px;margin-bottom:9px;color:#9fbedb}
+.astra-assistant{
+ padding:16px 17px 14px;border-radius:14px;
+ background:#10243b9e;border:1px solid #86b7e22c;
+ box-shadow:0 5px 20px #0002;
+}
+.astra-user .astra-message-content{
+ max-width:93%;border-radius:13px 13px 3px 13px;
+ background:#1b466ac9;border-color:#79b5e74f;
+ padding:12px 15px;font-size:13px;line-height:1.65;color:#edf7ff;
+ overflow-wrap:anywhere;
+}
+.astra-assistant .astra-message-content{font-size:14px;line-height:1.78;color:#e0edfa;overflow-wrap:anywhere}
+.astra-message-footer{margin-top:14px;padding-top:12px;border-top:1px solid #89b0d127}
+.astra-no-sources{letter-spacing:0;font-size:10px;line-height:1.6;color:#9db5c9}
+.astra-sources>span{color:#a4bed8}
+.astra-thinking{padding:16px 10px}
+.astra-composer{padding:12px 16px 10px;align-items:stretch;gap:10px;background:#0a1c30}
+.astra-composer textarea{
+ min-height:54px;max-height:140px;padding:13px 14px;
+ border-radius:12px;background:#132941;
+ color:#edf7ff;font-size:13px;line-height:1.55;
+}
+.astra-composer button{width:46px;height:auto;min-height:46px;border-radius:11px}
+.astra-caption{padding:9px 16px 12px;flex-wrap:wrap;line-height:1.5;background:#0a1c30}
+.astra-welcome p{font-size:13px;line-height:1.7}
+.astra-navigate{font-size:11px;padding:12px 14px}
+.astra-key-help,.astra-error{font-size:12px}
+/* Markdown is [innerHTML]-inserted: normal emulated component CSS cannot
+   reach those generated nodes. ::ng-deep is restricted to the ASTRA host. */
+:host ::ng-deep .astra-markdown{font:400 14px/1.78 'DM Sans',sans-serif;color:#e0edfa;overflow-wrap:anywhere}
+:host ::ng-deep .astra-markdown :is(h1,h2,h3,h4){
+ font-family:'Space Grotesk','DM Sans',sans-serif;font-weight:700;line-height:1.35;
+ color:#f6fbff;letter-spacing:-.15px;margin:18px 0 9px;
+}
+:host ::ng-deep .astra-markdown h1{font-size:19px}
+:host ::ng-deep .astra-markdown h2{font-size:17px}
+:host ::ng-deep .astra-markdown h3{font-size:15px}
+:host ::ng-deep .astra-markdown :is(h1,h2,h3,h4):first-child{margin-top:0}
+:host ::ng-deep .astra-markdown p{margin:0 0 13px;line-height:1.78;color:#e0edfa}
+:host ::ng-deep .astra-markdown p:last-child{margin-bottom:0}
+:host ::ng-deep .astra-markdown strong{font-weight:700;color:#ffffff}
+:host ::ng-deep .astra-markdown :is(ul,ol){padding-left:22px;margin:9px 0 14px}
+:host ::ng-deep .astra-markdown li{padding-left:2px;margin:0 0 7px;line-height:1.65}
+:host ::ng-deep .astra-markdown li::marker{color:#88c8f2}
+:host ::ng-deep .astra-markdown li p{margin-bottom:4px}
+:host ::ng-deep .astra-markdown a{color:#94d3ff;text-underline-offset:3px}
+:host ::ng-deep .astra-markdown code{font:500 12px/1.5 ui-monospace,Consolas,monospace;background:#1a3d60;border-radius:5px;padding:2px 5px;color:#cde8ff;overflow-wrap:anywhere}
+:host ::ng-deep .astra-markdown pre{overflow-x:auto;background:#061321;border:1px solid #5984ae69;border-radius:10px;padding:12px;margin:12px 0;white-space:pre}
+:host ::ng-deep .astra-markdown pre code{background:transparent;padding:0;overflow-wrap:normal}
+:host ::ng-deep .astra-markdown blockquote{margin:12px 0;padding:10px 13px;border-left:3px solid #7bbded;background:#18395770;border-radius:0 8px 8px 0;color:#bfd9f1}
+:host ::ng-deep .astra-markdown hr{border:0;border-top:1px solid #8cb5d044;margin:15px 0}
+:host ::ng-deep .astra-markdown table{display:block;overflow-x:auto;border-collapse:collapse;width:100%;margin:14px 0;font-size:12px}
+:host ::ng-deep .astra-markdown :is(td,th){border:1px solid #6389ab59;padding:8px;text-align:left}
+:host ::ng-deep .astra-markdown th{background:#214565;color:#f4faff}
+@media(max-width:900px) and (min-width:651px){:host{--astra-side-width:clamp(355px,44vw,440px)}}
+@media(max-width:650px){
+ :host{--astra-side-width:100vw}
+ .astra-panel{width:100vw}
+ .astra-body{padding:15px 14px 20px}
+ .astra-assistant{padding:14px}
+ .astra-header{height:64px;min-height:64px}
+ .astra-composer{padding:9px 11px}
+ :host ::ng-deep .astra-markdown{font-size:13px;line-height:1.7}
+}
+@media(prefers-reduced-motion:reduce){.astra-message,.astra-assistant{transition:none}}
