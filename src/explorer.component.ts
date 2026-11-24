@@ -18,14 +18,14 @@ const planets:Planet[]=[
 {id:'neptune',name:'Neptune',radiusKm:24622,meanDistanceAu:30.07,orbitalPeriodDays:60182,description:'A distant blue world with powerful winds.'}
 ];
 @Component({selector:'app-root',standalone:true,imports:[CommonModule,ObservatoryComponent],template:`
-<div class="shell"><header><div class="logo">✦ ORBIT<span>LAB</span> <small>EXPLORER / 06</small></div><div class="status">● LOCAL RENDER ENGINE / SOL SYSTEM</div></header>
-<div #viewport class="viewport"></div>
+<div class="shell"><header><div class="logo">✦ ORBIT<span>LAB</span> <small>EXPLORER / 07</small></div><div class="status">● LOCAL RENDER ENGINE / SOL SYSTEM</div></header>
+<div #viewport class="viewport"></div><div class="performance-hud" aria-live="off"><span>RENDER</span><strong>{{fps}} FPS</strong><span>{{renderQuality | uppercase}} QUALITY</span></div>
 <nav class="intro"><div class="eyebrow">IMMERSIVE SPACE EXPLORATION</div><h1>BEYOND<br><i>THE HORIZON.</i></h1><p>Travel between worlds. Explore the Solar System.</p><div class="planet-list"><button *ngFor="let p of planets;index as i" [class.active]="selected===p.id" (click)="focus(p.id)"><span class="index">{{i+1}}</span>{{p.name}}<span class="arrow">↗</span></button></div></nav>
 <aside><small>NOW EXPLORING / {{planetIndex+1}} OF 8</small><h2>{{active.name | uppercase}}</h2><p>{{active.description}}</p><div class="stat"><span>MEAN RADIUS</span><b>{{active.radiusKm | number}} km</b></div><div class="stat"><span>MEAN SOLAR DISTANCE</span><b>{{active.meanDistanceAu}} AU</b></div><div class="stat"><span>ORBITAL PERIOD</span><b>{{active.orbitalPeriodDays | number}} days</b></div><button class="next" (click)="focus(planets[(planetIndex+1)%8].id)">NEXT DESTINATION ↗</button><button class="obs-open" (click)="observatoryVisible=true">★ OPEN MY OBSERVATORY</button><div class="notice">{{textureStatus}}</div></aside>
-<app-observatory *ngIf="observatoryVisible" [selectedId]="selected" [selectedName]="active.name" (close)="observatoryVisible=false"></app-observatory><section class="asteroid-data" *ngIf="asteroidsVisible"><h3>NEAR-EARTH APPROACHES <button (click)="asteroidsVisible=false">✕</button></h3><p>Real NASA/JPL close-approach records — not impact predictions.</p><div class="asteroid-entry" *ngFor="let a of asteroids"><b>{{a["fullname"] || a["des"]}}</b><span>{{a["cd"]}}</span><span>{{a["dist"]}} AU · {{a["v_rel"]}} km/s</span></div><div class="notice">{{asteroidStatus}}</div></section><div class="controls"><button (click)="overview()">⊙ SYSTEM VIEW</button><button (click)="toggleAsteroids()">NASA ASTEROIDS</button><span>TIME</span><button *ngFor="let s of [0,1,10,100]" (click)="speed=s" [class.active]="speed===s">{{s===0?'PAUSE':s+'×'}}</button><button (click)="changeDate(-1)" aria-label="Previous UTC day">−1 DAY</button><input type="date" [value]="simulationDate" (change)="setDate($event)" aria-label="Simulation date in UTC" min="1900-01-02" max="2099-12-30"><button (click)="changeDate(1)" aria-label="Next UTC day">+1 DAY</button><button (click)="showOrbits=!showOrbits" [class.active]="showOrbits" [disabled]="ephemerisReady" title="Illustrative circular paths hidden in scientific mode">ORBITS</button><button (click)="focus(selected)">FOCUS</button><button (click)="toggleAutoOrbit()" [class.active]="autoOrbit">AUTO ORBIT</button></div><footer>DRAG TO ORBIT · SCROLL TO ZOOM · CLICK PLANETS · {{scienceStatus}} · DISPLAY DISTANCES COMPRESSED</footer></div>`})
+<app-observatory *ngIf="observatoryVisible" [selectedId]="selected" [selectedName]="active.name" (close)="observatoryVisible=false"></app-observatory><section class="asteroid-data" *ngIf="asteroidsVisible"><h3>NEAR-EARTH APPROACHES <button (click)="asteroidsVisible=false">✕</button></h3><p>Real NASA/JPL close-approach records — not impact predictions.</p><div class="asteroid-entry" *ngFor="let a of asteroids"><b>{{a["fullname"] || a["des"]}}</b><span>{{a["cd"]}}</span><span>{{a["dist"]}} AU · {{a["v_rel"]}} km/s</span></div><div class="notice">{{asteroidStatus}}</div></section><div class="controls"><label class="quality-label">GRAPHICS <select aria-label="Graphics quality" [value]="renderQuality" (change)="setQuality($event)"><option value="low">LOW</option><option value="balanced">BALANCED</option><option value="high">HIGH</option></select></label><button (click)="overview()">⊙ SYSTEM VIEW</button><button (click)="toggleAsteroids()">NASA ASTEROIDS</button><span>TIME</span><button *ngFor="let s of [0,1,10,100]" (click)="speed=s" [class.active]="speed===s">{{s===0?'PAUSE':s+'×'}}</button><button (click)="changeDate(-1)" aria-label="Previous UTC day">−1 DAY</button><input type="date" [value]="simulationDate" (change)="setDate($event)" aria-label="Simulation date in UTC" min="1900-01-02" max="2099-12-30"><button (click)="changeDate(1)" aria-label="Next UTC day">+1 DAY</button><button (click)="showOrbits=!showOrbits" [class.active]="showOrbits" [disabled]="ephemerisReady" title="Illustrative circular paths hidden in scientific mode">ORBITS</button><button (click)="focus(selected)">FOCUS</button><button (click)="toggleAutoOrbit()" [class.active]="autoOrbit">AUTO ORBIT</button></div><footer>DRAG TO ORBIT · SCROLL TO ZOOM · CLICK PLANETS · {{scienceStatus}} · DISPLAY DISTANCES COMPRESSED</footer></div>`})
 export class AppComponent implements AfterViewInit,OnDestroy{
  @ViewChild('viewport',{static:true}) viewport!:ElementRef<HTMLDivElement>;
- planets=planets;selected='earth';speed=0;showOrbits=false;autoOrbit=false;simulationDate=new Date().toISOString().slice(0,10);scienceStatus='CONNECTING TO NASA/JPL...';ephemerisReady=false;private ephemeris?:Ephemeris;private fraction=0;private requestCounter=0;observatoryVisible=false;asteroidsVisible=false;asteroids:Record<string,string>[]=[];asteroidStatus='Not loaded';textureStatus='Loading local planetary textures...';
+ planets=planets;selected='earth';renderQuality:'low'|'balanced'|'high'='balanced';fps=0;private fpsFrames=0;private fpsStart=0;speed=0;showOrbits=false;autoOrbit=false;simulationDate=new Date().toISOString().slice(0,10);scienceStatus='CONNECTING TO NASA/JPL...';ephemerisReady=false;private ephemeris?:Ephemeris;private fraction=0;private requestCounter=0;observatoryVisible=false;asteroidsVisible=false;asteroids:Record<string,string>[]=[];asteroidStatus='Not loaded';textureStatus='Loading local planetary textures...';
  get active(){return this.planets.find(p=>p.id===this.selected)??planets[2];}get planetIndex(){return this.planets.findIndex(p=>p.id===this.selected);}
  private scene=new THREE.Scene();private camera=new THREE.PerspectiveCamera(48,1,.1,3000);private renderer?:THREE.WebGLRenderer;private controls?:OrbitControls;private frame=0;private observer?:ResizeObserver;private last=0;
  private worlds:{p:Planet,mesh:THREE.Mesh,group:THREE.Group,orbit:number,radius:number,angle:number,cloud?:THREE.Mesh}[]=[];private lines:THREE.LineLoop[]=[];
@@ -34,7 +34,7 @@ export class AppComponent implements AfterViewInit,OnDestroy{
  ngAfterViewInit(){
  const host=this.viewport.nativeElement;
  this.renderer=new THREE.WebGLRenderer({antialias:true,powerPreference:'high-performance',alpha:true});
- this.renderer.setPixelRatio(Math.min(devicePixelRatio,2));this.renderer.outputColorSpace=THREE.SRGBColorSpace;
+ this.renderer.setPixelRatio(Math.min(devicePixelRatio,1.5));this.renderer.outputColorSpace=THREE.SRGBColorSpace;
  this.renderer.toneMapping=THREE.ACESFilmicToneMapping;this.renderer.toneMappingExposure=1.4;host.appendChild(this.renderer.domElement);
  this.camera.position.set(30,18,40);this.controls=new OrbitControls(this.camera,this.renderer.domElement);
  this.controls.enableDamping=true;this.controls.dampingFactor=.055;this.controls.rotateSpeed=.55;this.controls.zoomSpeed=.85;this.controls.enablePan=false;this.controls.minPolarAngle=.08;this.controls.maxPolarAngle=Math.PI-.08;this.controls.minDistance=2;this.controls.maxDistance=500;this.controls.addEventListener('start',()=>{this.flight=undefined;this.controls!.enabled=true;});
@@ -84,9 +84,31 @@ export class AppComponent implements AfterViewInit,OnDestroy{
  const points=Array.from({length:256},(_,j)=>{const a=j/256*6.283185;return new THREE.Vector3(Math.cos(a)*orbit,0,Math.sin(a)*orbit);});
  const line=new THREE.LineLoop(new THREE.BufferGeometry().setFromPoints(points),new THREE.LineBasicMaterial({color:0x4c6d94,transparent:true,opacity:.32}));this.lines.push(line);this.scene.add(line);
  });
- this.renderer.domElement.addEventListener('pointerdown',this.onDown);this.renderer.domElement.addEventListener('pointerup',this.onUp);
- this.observer=new ResizeObserver(()=>{const w=host.clientWidth,h=host.clientHeight;if(w&&h){this.camera.aspect=w/h;this.camera.updateProjectionMatrix();this.renderer!.setSize(w,h);}});this.observer.observe(host);this.focus('earth',true);this.frame=requestAnimationFrame(this.renderFrame);void this.loadEphemeris(this.simulationDate);fetch('http://localhost:8080/api/planets').then(response=>response.ok?response.json():Promise.reject('Backend offline')).then((data:Planet[])=>{if(data.length===8)this.planets=data;}).catch(()=>{console.info('OrbitLab: backend unavailable, using local planet catalog');});
+ window.addEventListener('keydown',this.onKeyDown);this.renderer.domElement.addEventListener('pointerdown',this.onDown);this.renderer.domElement.addEventListener('pointerup',this.onUp);
+ this.observer=new ResizeObserver(()=>{const w=host.clientWidth,h=host.clientHeight;if(w&&h){this.camera.aspect=w/h;this.camera.updateProjectionMatrix();this.renderer!.setSize(w,h);}});this.observer.observe(host);this.focus('earth',true);this.applyQuality();this.frame=requestAnimationFrame(this.renderFrame);void this.loadEphemeris(this.simulationDate);fetch('http://localhost:8080/api/planets').then(response=>response.ok?response.json():Promise.reject('Backend offline')).then((data:Planet[])=>{if(data.length===8)this.planets=data;}).catch(()=>{console.info('OrbitLab: backend unavailable, using local planet catalog');});
  }
+ setQuality(event:Event){
+ const value=(event.target as HTMLSelectElement).value;
+ if(value!=='low'&&value!=='balanced'&&value!=='high')return;
+ this.renderQuality=value;
+ this.applyQuality();
+ }
+ private applyQuality(){
+ if(!this.renderer)return;
+ const ratio=this.renderQuality==='low'?1:this.renderQuality==='balanced'?1.5:2;
+ this.renderer.setPixelRatio(Math.min(window.devicePixelRatio||1,ratio));
+ for(const w of this.worlds){
+  w.cloud && (w.cloud.visible=this.renderQuality!=='low' && !!(w.cloud.material as THREE.MeshStandardMaterial).map);
+ }
+ }
+ private onKeyDown=(event:KeyboardEvent)=>{
+  const target=event.target as HTMLElement|null;
+  if(target && ['INPUT','TEXTAREA','SELECT'].includes(target.tagName))return;
+  if(event.key==='Escape'){this.observatoryVisible=false;this.asteroidsVisible=false;}
+  else if(event.key.toLowerCase()==='f'){this.focus(this.selected);}
+  else if(event.key.toLowerCase()==='o'){this.overview();}
+  else if(event.code==='Space'){event.preventDefault();this.speed=this.speed===0?1:0;}
+ };
  async loadEphemeris(date:string){
   const request=++this.requestCounter;this.scienceStatus='LOADING NASA/JPL HORIZONS VECTORS';this.ephemerisReady=false;this.speed=0;this.fraction=0;
   try {
@@ -151,7 +173,7 @@ export class AppComponent implements AfterViewInit,OnDestroy{
  }
  private onDown=(e:PointerEvent)=>{this.down={x:e.clientX,y:e.clientY};};
  private onUp=(e:PointerEvent)=>{if(Math.hypot(e.clientX-this.down.x,e.clientY-this.down.y)>5)return;const rect=this.renderer!.domElement.getBoundingClientRect();this.pointer.set((e.clientX-rect.left)/rect.width*2-1,-(e.clientY-rect.top)/rect.height*2+1);this.ray.setFromCamera(this.pointer,this.camera);const hit=this.ray.intersectObjects(this.worlds.map(w=>w.mesh),false)[0];const world=this.worlds.find(w=>w.mesh===hit?.object);if(world)this.focus(world.p.id);};
- private renderFrame=(now:number)=>{const dt=Math.min((now-this.last)/1000,.05);this.last=now;
+ private renderFrame=(now:number)=>{const dt=Math.min((now-this.last)/1000,.05);this.last=now;this.fpsFrames++;if(now-this.fpsStart>=1000){this.fps=Math.round(this.fpsFrames*1000/Math.max(1,now-this.fpsStart));this.fpsFrames=0;this.fpsStart=now;}
  if(this.ephemerisReady){
   if(this.speed>0){
    this.fraction=Math.min(1,this.fraction+dt*this.speed/120);
@@ -182,5 +204,5 @@ export class AppComponent implements AfterViewInit,OnDestroy{
   this.controls.update(dt);
  }
  this.renderer?.render(this.scene,this.camera);this.frame=requestAnimationFrame(this.renderFrame);};
- ngOnDestroy(){cancelAnimationFrame(this.frame);this.observer?.disconnect();this.renderer?.domElement.removeEventListener('pointerdown',this.onDown);this.renderer?.domElement.removeEventListener('pointerup',this.onUp);this.controls?.dispose();this.scene.traverse(o=>{const m=o as THREE.Mesh;m.geometry?.dispose();if(m.material)(Array.isArray(m.material)?m.material:[m.material]).forEach(x=>x.dispose());});this.textures.forEach(x=>x.dispose());this.ringTexture?.dispose();this.renderer?.dispose();}
+ ngOnDestroy(){cancelAnimationFrame(this.frame);window.removeEventListener('keydown',this.onKeyDown);this.observer?.disconnect();this.renderer?.domElement.removeEventListener('pointerdown',this.onDown);this.renderer?.domElement.removeEventListener('pointerup',this.onUp);this.controls?.dispose();this.scene.traverse(o=>{const m=o as THREE.Mesh;m.geometry?.dispose();if(m.material)(Array.isArray(m.material)?m.material:[m.material]).forEach(x=>x.dispose());});this.textures.forEach(x=>x.dispose());this.ringTexture?.dispose();this.renderer?.dispose();}
 }

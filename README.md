@@ -1,18 +1,33 @@
-# OrbitLab Phase 6 — Personal Observatory
+# OrbitLab — Phase 7: Performance and demo readiness
 
-Angular + Three.js runs locally at http://localhost:4200 and calls Spring Boot on http://localhost:8080.
+Local-only Java SOA university project. Angular/Three.js at http://localhost:4200, Spring Boot REST services at http://localhost:8080, MySQL on localhost.
 
-## Setup
-1. Start MySQL and create the orbitlab database as described in the backend README.
-2. Run Java Spring Boot.
-3. In frontend directory: `git pull origin main`, `npm install`, `npm run build`, `npm start`.
-4. Select a planet, click **OPEN MY OBSERVATORY**, save it to favorites, create an observation list, and add the selected planet.
+## Launch order
 
-## Phase 6 scope
-- Local **single-profile** favorites and observation-list CRUD.
-- Every mutation is sent to the Java REST API and persisted to local MySQL.
-- No authentication yet: do not expose port 8080 publicly.
-- Real JPL Horizons date-based positions and 3D textures remain supported.
-- Planet imagery and advanced shaders are visualizations, not navigation-grade measurements.
+1. Start local MySQL. Create the `orbitlab` database as documented in the backend README.
+2. Start Java: `mvn clean test` then `mvn spring-boot:run` with your local database environment variables.
+3. Start Angular: `npm install`, `npm run build`, `npm start`.
+4. Open http://localhost:4200.
 
-NASA-derived planetary texture credits: Solar System Scope / INOVE CC BY 4.0, https://www.solarsystemscope.com/textures/
+## Controls
+
+- Drag: orbit camera; scroll: zoom; click a planet: focus.
+- **O**: Solar System overview; **F**: focus selected planet; **Space**: pause/resume; **Esc**: close Observatory and Asteroids panels.
+- Graphics LOW (pixel ratio 1, clouds hidden), BALANCED (1.5), HIGH (2). The FPS display is a local rendering diagnostic, not a GPU benchmark.
+- If labels or controls overlap on small screens, the toolbar scrolls horizontally.
+
+## Academic demonstration
+
+1. Open the planetary REST endpoint and explain Angular consuming Java.
+2. Choose a date and verify the JPL Horizons endpoint; explain coordinates, radial compression and interpolation.
+3. Open NASA Asteroids and explain the external public API integration through Spring Boot.
+4. Save Earth as a favorite, create an observation list, add Mars, reload and prove MySQL persistence.
+5. Show graphics quality controls, camera navigation and responsive behavior.
+
+## Scientific disclaimers
+
+JPL provides real heliocentric positions, but scale is compressed. Planet sizes are exaggerated; textures and atmosphere are artistic renderings. Never present approximated orbital paths, planetary spin or rings as validated scientific measurements.
+
+## Security
+
+Single-user local-only profile without authorization. Do not expose the Java service or database to the internet. Credentials must stay outside Git. Texture credits: Solar System Scope / INOVE CC BY 4.0, https://www.solarsystemscope.com/textures/.
