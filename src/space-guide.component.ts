@@ -14,7 +14,7 @@ type Turn={role:'user'|'assistant';text:string;html:string;sources:Source[];plan
   <span class="astra-launch-glyph">✦</span><span>{{open?'CLOSE GUIDE':'ASK ASTRA'}}</span><span class="astra-launch-glow"></span>
  </button>
  <section class="astra-panel" *ngIf="open" aria-label="OrbitLab space guide" role="dialog">
-  <header class="astra-header"><div class="astra-avatar">✦</div><div><div class="astra-name">ASTRA <span>SPACE GUIDE</span></div><div class="astra-status"><span class="astra-led"></span>{{configured===false?'API KEY REQUIRED':'GEMINI · SPACE-ONLY ASSISTANT'}}</div></div><button class="astra-close" (click)="setOpen(false)" aria-label="Close chat">✕</button></header>
+  <header class="astra-header"><div class="astra-avatar">✦</div><div><div class="astra-name">ASTRA <span>SPACE GUIDE</span></div><div class="astra-status"><span class="astra-led"></span>{{configured===false?'API KEY REQUIRED':providerLabel+' · SPACE-ONLY ASSISTANT'}}</div></div><button class="astra-close" (click)="setOpen(false)" aria-label="Close chat">✕</button></header>
   <div class="astra-body" #historyPanel>
    <div class="astra-welcome" *ngIf="messages.length===0">
     <div class="astra-planet">✺</div><div class="astra-kicker">YOUR INTERACTIVE SPACE COMPANION</div>
@@ -41,7 +41,7 @@ type Turn={role:'user'|'assistant';text:string;html:string;sources:Source[];plan
     <textarea maxlength="600" rows="2" [value]="draft" (input)="draft=readValue($event)" (keydown)="keyDown($event)" [disabled]="loading" aria-label="Ask a question about space" placeholder="Ask about planets, space or OrbitLab..."></textarea>
     <button type="submit" [disabled]="loading || draft.trim().length<2" aria-label="Send question">↗</button>
   </form>
-  <div class="astra-caption"><span>✦ GEMINI FLASH-LITE</span><span>FREE-TIER QUOTAS APPLY · AI CAN MAKE MISTAKES</span></div>
+  <div class="astra-caption"><span>✦ {{modelLabel}}</span><span>FREE-TIER QUOTAS APPLY · AI CAN MAKE MISTAKES</span></div>
  </section>`,
  styleUrl:'./space-guide.component.css'
 })
@@ -49,12 +49,12 @@ export class SpaceGuideComponent implements OnInit,OnDestroy {
  @Input() selectedPlanet='earth';
  @Output() navigatePlanet=new EventEmitter<string>();
  @Output() openChange=new EventEmitter<boolean>();
- open=false;loading=false;draft='';error='';configured:boolean|null=null;
+ open=false;loading=false;draft='';error='';configured:boolean|null=null;providerLabel='AI';modelLabel='AI ASSISTANT';
  messages:Turn[]=[];
  private timer?:ReturnType<typeof setInterval>;
  private readonly api='http://localhost:8080/api/space-guide';
  async ngOnInit(){
-  try{const res=await fetch(this.api+'/status');if(res.ok){const data=await res.json() as {configured:boolean};this.configured=data.configured;}}
+  try{const res=await fetch(this.api+'/status');if(res.ok){const data=await res.json() as {configured:boolean;provider?:string;groqModel?:string;model?:string};this.configured=data.configured;this.providerLabel=(data.provider||'AI').toUpperCase();this.modelLabel=(data.provider==='groq'?data.groqModel:data.model)||'AI ASSISTANT';}}
   catch{this.error='Spring Boot is offline. Start the backend at localhost:8080.';}
  }
  ngOnDestroy(){if(this.timer)clearInterval(this.timer);}
@@ -88,8 +88,8 @@ export class SpaceGuideComponent implements OnInit,OnDestroy {
   try{
    const res=await fetch(this.api+'/chat',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({message:question,history,selectedPlanet:this.selectedPlanet})});
    if(!res.ok){
-    if(res.status===503)throw Error('Gemini is not configured. Set GEMINI_API_KEY in Spring Boot and restart it.');
-    if(res.status===429)throw Error('Gemini free-tier or local demo limit reached. Try again shortly.');
+    if(res.status===503)throw Error('AI provider is not configured. Check GROQ_API_KEY or Gemini keys in Spring Boot and restart it.');
+    if(res.status===429)throw Error('AI provider free-tier or local demo limit reached. Check the limits before retrying.');
     let reason='';
     try {
       const payload=await res.json() as {detail?:string;message?:string;error?:string};
