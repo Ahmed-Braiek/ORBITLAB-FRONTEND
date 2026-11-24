@@ -1,33 +1,33 @@
-# OrbitLab — Phase 7: Performance and demo readiness
+# OrbitLab — Gemini ASTRA Space Guide
 
-Local-only Java SOA university project. Angular/Three.js at http://localhost:4200, Spring Boot REST services at http://localhost:8080, MySQL on localhost.
+New Phase 9 feature: an astronomy-focused, animated AI assistant using the **Gemini 2.5 Flash-Lite** free tier (subject to Google's availability, rate limits and regional rules). The **Java Spring Boot backend** calls Gemini; the browser never receives the API key.
 
-## Launch order
+## Setup
+1. Get a free-tier API key from https://aistudio.google.com/apikey .
+2. In the **same PowerShell session** that starts Java:
+   ```powershell
+   $env:GEMINI_API_KEY="YOUR_KEY"
+   mvn spring-boot:run
+   ```
+3. Check http://localhost:8080/api/space-guide/status — should show `configured:true`.
+4. Start Angular: `npm install`, `npm run build`, `npm start`.
+5. Click **ASK ASTRA** near the bottom right of the 3D explorer.
 
-1. Start local MySQL. Create the `orbitlab` database as documented in the backend README.
-2. Start Java: `mvn clean test` then `mvn spring-boot:run` with your local database environment variables.
-3. Start Angular: `npm install`, `npm run build`, `npm start`.
-4. Open http://localhost:4200.
+The frontend uses `marked` to format Markdown and `DOMPurify` to sanitize HTML. It reveals the answer progressively, lists verified grounding links only when returned by Gemini, and supports **EXPLORE PLANET** to trigger the existing 3D camera focus.
 
-## Controls
+## Examples
+- Why is Mars red?
+- Why is Neptune so blue?
+- How do Saturn's rings form?
+- What is a near-Earth asteroid?
+- How is JPL Horizons used in OrbitLab?
+- How do I save Earth in My Observatory?
 
-- Drag: orbit camera; scroll: zoom; click a planet: focus.
-- **O**: Solar System overview; **F**: focus selected planet; **Space**: pause/resume; **Esc**: close Observatory and Asteroids panels.
-- Graphics LOW (pixel ratio 1, clouds hidden), BALANCED (1.5), HIGH (2). The FPS display is a local rendering diagnostic, not a GPU benchmark.
-- If labels or controls overlap on small screens, the toolbar scrolls horizontally.
-
-## Academic demonstration
-
-1. Open the planetary REST endpoint and explain Angular consuming Java.
-2. Choose a date and verify the JPL Horizons endpoint; explain coordinates, radial compression and interpolation.
-3. Open NASA Asteroids and explain the external public API integration through Spring Boot.
-4. Save Earth as a favorite, create an observation list, add Mars, reload and prove MySQL persistence.
-5. Show graphics quality controls, camera navigation and responsive behavior.
-
-## Scientific disclaimers
-
-JPL provides real heliocentric positions, but scale is compressed. Planet sizes are exaggerated; textures and atmosphere are artistic renderings. Never present approximated orbital paths, planetary spin or rings as validated scientific measurements.
-
-## Security
-
-Single-user local-only profile without authorization. Do not expose the Java service or database to the internet. Credentials must stay outside Git. Texture credits: Solar System Scope / INOVE CC BY 4.0, https://www.solarsystemscope.com/textures/.
+## Safety and accuracy
+- Scope limited by backend system instructions to space, science and OrbitLab. Model scope controls are not guaranteed.
+- No fabricated citations; sources come from Gemini search grounding metadata, when present.
+- Navigation targets are limited to one explicitly mentioned supported planet.
+- The chatbot's animation is *display animation*, not token-level server streaming.
+- No billing or hosting required for eligible free-tier usage; quota/availability may change.
+- Never commit the key or paste it in browser frontend. Free-tier content may be used by Google to improve products.
+- Previous Earth/Saturn graphics, Java REST endpoints, NASA/JPL Horizons and MySQL Observatory remain unchanged.
