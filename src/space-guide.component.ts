@@ -20,7 +20,7 @@ type Turn={role:'user'|'assistant';text:string;html:string;sources:Source[];plan
     <div class="astra-planet">✺</div><div class="astra-kicker">YOUR INTERACTIVE SPACE COMPANION</div>
     <h3>Curiosity has<br><em>no limits.</em></h3>
     <p>Explore the Solar System, discover what makes each world unique, or ask how OrbitLab works.</p>
-    <div class="astra-chips"><button (click)="sendSuggestion('Why is Mars red?')">WHY IS MARS RED? ↗</button><button (click)="sendSuggestion('How do Saturn\'s rings form?')">SATURN'S RINGS ↗</button><button (click)="sendSuggestion('What does NASA Horizons provide to OrbitLab?')">ABOUT ORBITLAB ↗</button></div>
+    <div class="astra-chips"><button (click)="sendSuggestion('Why is Mars red?')">WHY IS MARS RED? ↗</button><button (click)="sendSuggestion('How are the rings of Saturn formed?')">SATURN'S RINGS ↗</button><button (click)="sendSuggestion('What does NASA Horizons provide to OrbitLab?')">ABOUT ORBITLAB ↗</button></div>
    </div>
    <div class="astra-message" *ngFor="let message of messages" [class.astra-assistant]="message.role==='assistant'" [class.astra-user]="message.role==='user'">
     <div class="astra-speaker">{{message.role==='assistant'?'✦ ASTRA':'YOU'}}</div>
