@@ -115,7 +115,7 @@ export class AppComponent implements AfterViewInit,OnDestroy{
   geometry.setAttribute('aPhase',new THREE.BufferAttribute(phases,1));
   geometry.setAttribute('aRate',new THREE.BufferAttribute(rates,1));
   const material=new THREE.ShaderMaterial({
-   uniforms:this.starUniforms,vertexColors:true,transparent:true,depthWrite:false,depthTest:false,
+   uniforms:this.starUniforms,vertexColors:true,transparent:true,depthWrite:false,depthTest:true,
    blending:THREE.AdditiveBlending,
    vertexShader:`
     uniform float uTime;uniform float uPixelRatio;uniform float uBrightness;
