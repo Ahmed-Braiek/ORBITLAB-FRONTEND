@@ -1,7 +1,18 @@
-# OrbitLab Phase 5 — Photorealistic rendering improvements
+# OrbitLab Phase 6 — Personal Observatory
 
-Run `git pull origin main`, `npm install`, `npm run assets:download`, `npm run build`, and `npm start` in that order. Backend still runs locally at http://localhost:8080.
+Angular + Three.js runs locally at http://localhost:4200 and calls Spring Boot on http://localhost:8080.
 
-Earth now uses a day/night sunlight terminator shader, an optional local night-lights map, cloud shell, and light-aware atmospheric rim. Saturn rings use layered procedural bands with an approximate Cassini Division; star brightness and density are reduced. Visual effects approximate appearance, not time-specific NASA measurements or physical radiative transfer. Planet positions still come from JPL when available, and display distances are compressed.
+## Setup
+1. Start MySQL and create the orbitlab database as described in the backend README.
+2. Run Java Spring Boot.
+3. In frontend directory: `git pull origin main`, `npm install`, `npm run build`, `npm start`.
+4. Select a planet, click **OPEN MY OBSERVATORY**, save it to favorites, create an observation list, and add the selected planet.
 
-Textures: Solar System Scope / INOVE, CC BY 4.0; https://www.solarsystemscope.com/textures/ . Night map is optional; if the source is unavailable Earth renders a dark night side.
+## Phase 6 scope
+- Local **single-profile** favorites and observation-list CRUD.
+- Every mutation is sent to the Java REST API and persisted to local MySQL.
+- No authentication yet: do not expose port 8080 publicly.
+- Real JPL Horizons date-based positions and 3D textures remain supported.
+- Planet imagery and advanced shaders are visualizations, not navigation-grade measurements.
+
+NASA-derived planetary texture credits: Solar System Scope / INOVE CC BY 4.0, https://www.solarsystemscope.com/textures/
