@@ -59,7 +59,7 @@ export class AppComponent implements AfterViewInit,OnDestroy{
  const line=new THREE.LineLoop(new THREE.BufferGeometry().setFromPoints(points),new THREE.LineBasicMaterial({color:0x4c6d94,transparent:true,opacity:.32}));this.lines.push(line);this.scene.add(line);
  });
  this.renderer.domElement.addEventListener('pointerdown',this.onDown);this.renderer.domElement.addEventListener('pointerup',this.onUp);
- this.observer=new ResizeObserver(()=>{const w=host.clientWidth,h=host.clientHeight;if(w&&h){this.camera.aspect=w/h;this.camera.updateProjectionMatrix();this.renderer!.setSize(w,h);}});this.observer.observe(host);this.focus('earth',true);this.frame=requestAnimationFrame(this.renderFrame);
+ this.observer=new ResizeObserver(()=>{const w=host.clientWidth,h=host.clientHeight;if(w&&h){this.camera.aspect=w/h;this.camera.updateProjectionMatrix();this.renderer!.setSize(w,h);}});this.observer.observe(host);this.focus('earth',true);this.frame=requestAnimationFrame(this.renderFrame);fetch('http://localhost:8080/api/planets').then(response=>response.ok?response.json():Promise.reject('Backend offline')).then((data:Planet[])=>{if(data.length===8)this.planets=data;}).catch(()=>{console.info('OrbitLab: backend unavailable, using local planet catalog');});
  }
  focus(id:string,immediate=false){this.selected=id;const w=this.worlds.find(x=>x.p.id===id);if(!w)return;const d=Math.max(w.radius*5,12);this.travelTarget.copy(w.group.position);this.travelOffset.set(d*.6,d*.25,d);if(immediate){this.camera.position.copy(this.travelTarget).add(this.travelOffset);this.controls!.target.copy(this.travelTarget);this.controls!.update();}}
  private onDown=(e:PointerEvent)=>{this.down={x:e.clientX,y:e.clientY};};
