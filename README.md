@@ -1,18 +1,14 @@
-# OrbitLab — Frontend
+# OrbitLab Phase 2 — Cinematic Renderer
 
-Angular 20 + Three.js local-first interactive Solar System for the Java SOA university project.
+Local development only.
 
-## Run
-
-Requires Node.js 22 and npm.
-
-```bash
+```powershell
+git pull origin main
 npm install
+npm run assets:download
 npm start
 ```
 
-Open http://localhost:4200. Run the Spring Boot backend at http://localhost:8080 for REST planet data. Frontend also has local fallback data.
+Visit http://localhost:4200 . The Java backend remains at localhost:8080.
 
-## Important scientific note
-
-Phase 1 visual scale and orbits are illustrative. The real JPL Horizons position pipeline, NASA textures and advanced lighting will be implemented in later phases. No hosting or paid service is used.
+The asset download runs ONCE and saves textures locally under public/textures. Some NASA-derived Solar System Scope maps have artistic processing. Credit: Solar System Scope / INOVE, CC BY 4.0 (https://www.solarsystemscope.com/textures/). Orbital motion and scale are illustrative until JPL Horizons is integrated.
