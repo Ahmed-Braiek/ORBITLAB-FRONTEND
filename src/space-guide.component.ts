@@ -1,5 +1,5 @@
 import {CommonModule} from '@angular/common';
-import {Component,EventEmitter,Input,OnDestroy,OnInit,Output} from '@angular/core';
+import {Component,ElementRef,EventEmitter,Input,OnDestroy,OnInit,Output,ViewChild} from '@angular/core';
 import {marked} from 'marked';
 import DOMPurify from 'dompurify';
 
@@ -35,7 +35,7 @@ type Turn={role:'user'|'assistant';text:string;html:string;sources:Source[];plan
    </div>
    <div class="astra-thinking" *ngIf="loading"><span></span><span></span><span></span><small>ASTRA IS SEARCHING THE COSMOS</small></div>
    <div class="astra-error" role="alert" *ngIf="error">{{error}}</div>
-   <div class="astra-key-help" *ngIf="configured===false">Set <code>GEMINI_API_KEY</code> in the backend terminal, then restart Spring Boot. Never paste your key in this chat.</div>
+   <div class="astra-key-help" *ngIf="configured===false">Configure <code>GROQ_API_KEY</code> or <code>GEMINI_API_KEY</code> in the backend terminal, then restart Spring Boot. Never paste a key into the chat.</div>
   </div>
   <form class="astra-composer" (submit)="submit($event)">
     <textarea maxlength="600" rows="2" [value]="draft" (input)="draft=readValue($event)" (keydown)="keyDown($event)" [disabled]="loading" aria-label="Ask a question about space" placeholder="Ask about planets, space or OrbitLab..."></textarea>
@@ -46,12 +46,15 @@ type Turn={role:'user'|'assistant';text:string;html:string;sources:Source[];plan
  styleUrl:'./space-guide.component.css'
 })
 export class SpaceGuideComponent implements OnInit,OnDestroy {
+ @ViewChild('historyPanel') historyPanel?:ElementRef<HTMLDivElement>;
  @Input() selectedPlanet='earth';
  @Output() navigatePlanet=new EventEmitter<string>();
  @Output() openChange=new EventEmitter<boolean>();
  open=false;loading=false;draft='';error='';configured:boolean|null=null;providerLabel='AI';modelLabel='AI ASSISTANT';
  messages:Turn[]=[];
  private timer?:ReturnType<typeof setInterval>;
+ private readonly maxRevealSteps=80;
+ private scrollChat(force=false){const el=this.historyPanel?.nativeElement;if(!el)return;const nearBottom=el.scrollHeight-el.scrollTop-el.clientHeight<140;if(force||nearBottom)requestAnimationFrame(()=>{if(force||el.scrollHeight-el.scrollTop-el.clientHeight<180)el.scrollTop=el.scrollHeight;});}
  private readonly api='http://localhost:8080/api/space-guide';
  async ngOnInit(){
   try{const res=await fetch(this.api+'/status');if(res.ok){const data=await res.json() as {configured:boolean;provider?:string;groqModel?:string;model?:string};this.configured=data.configured;this.providerLabel=(data.provider||'AI').toUpperCase();this.modelLabel=(data.provider==='groq'?data.groqModel:data.model)||'AI ASSISTANT';}}
@@ -59,7 +62,7 @@ export class SpaceGuideComponent implements OnInit,OnDestroy {
  }
  ngOnDestroy(){if(this.timer)clearInterval(this.timer);}
  toggle(){this.setOpen(!this.open);}
- setOpen(value:boolean){this.open=value;this.openChange.emit(value);}
+ setOpen(value:boolean){this.open=value;this.openChange.emit(value);if(value)this.scrollChat(true);}
  readValue(e:Event){return (e.target as HTMLTextAreaElement).value;}
  keyDown(e:KeyboardEvent){if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();void this.send();}}
  submit(e:Event){e.preventDefault();void this.send();}
@@ -72,9 +75,11 @@ export class SpaceGuideComponent implements OnInit,OnDestroy {
  private reveal(turn:Turn){
   if(this.timer)clearInterval(this.timer);
   const full=turn.text;let offset=0;turn.html='';
+  this.scrollChat(true);
   this.timer=setInterval(()=>{
    offset=Math.min(full.length,offset+Math.max(5,Math.ceil(full.length/95)));
    turn.html=this.render(full.slice(0,offset));
+   this.scrollChat();
    if(offset>=full.length){turn.complete=true;if(this.timer)clearInterval(this.timer);this.timer=undefined;}
   },22);
  }
@@ -85,6 +90,7 @@ export class SpaceGuideComponent implements OnInit,OnDestroy {
   const history=this.messages.slice(-6).map(x=>({role:x.role,content:x.text.slice(0,1000)}));
   this.messages.push({role:'user',text:question,html:'',sources:[],planet:null,complete:true});
   this.loading=true;
+  this.scrollChat(true);
   try{
    const res=await fetch(this.api+'/chat',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({message:question,history,selectedPlanet:this.selectedPlanet})});
    if(!res.ok){
@@ -99,8 +105,8 @@ export class SpaceGuideComponent implements OnInit,OnDestroy {
    }
    const body=await res.json() as GuideResponse;
    const turn:Turn={role:'assistant',text:body.answer,html:'',sources:body.sources??[],planet:body.navigatePlanet,complete:false};
-   this.messages.push(turn);this.reveal(turn);
-  }catch(e){this.error=e instanceof Error?e.message:'Unexpected network error.';}
+   this.messages.push(turn);this.scrollChat(true);this.reveal(turn);
+  }catch(e){this.error=e instanceof Error?e.message:'Unexpected network error.';this.scrollChat(true);}
   finally{this.loading=false;}
  }
 }
