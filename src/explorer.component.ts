@@ -2,6 +2,9 @@ import {AfterViewInit,Component,ElementRef,OnDestroy,ViewChild} from '@angular/c
 import {CommonModule} from '@angular/common';
 import * as THREE from 'three';
 import {OrbitControls} from 'three/addons/controls/OrbitControls.js';
+type Vector3Au={xAu:number;yAu:number;zAu:number};
+type EphemerisBody={id:string;horizonsId:string;positionsAu:Vector3Au[]};
+type Ephemeris={date:string;source:string;sampleDates:string[];bodies:EphemerisBody[];staleCache?:boolean};
 type Planet={id:string;name:string;radiusKm:number;meanDistanceAu:number;orbitalPeriodDays:number;description:string};
 const planets:Planet[]=[
 {id:'mercury',name:'Mercury',radiusKm:2439.7,meanDistanceAu:.387,orbitalPeriodDays:87.97,description:'A heavily cratered rocky world.'},
@@ -14,14 +17,14 @@ const planets:Planet[]=[
 {id:'neptune',name:'Neptune',radiusKm:24622,meanDistanceAu:30.07,orbitalPeriodDays:60182,description:'A distant blue world with powerful winds.'}
 ];
 @Component({selector:'app-root',standalone:true,imports:[CommonModule],template:`
-<div class="shell"><header><div class="logo">✦ ORBIT<span>LAB</span> <small>EXPLORER / 02</small></div><div class="status">● LOCAL RENDER ENGINE / SOL SYSTEM</div></header>
+<div class="shell"><header><div class="logo">✦ ORBIT<span>LAB</span> <small>EXPLORER / 04</small></div><div class="status">● LOCAL RENDER ENGINE / SOL SYSTEM</div></header>
 <div #viewport class="viewport"></div>
 <nav class="intro"><div class="eyebrow">IMMERSIVE SPACE EXPLORATION</div><h1>BEYOND<br><i>THE HORIZON.</i></h1><p>Travel between worlds. Explore the Solar System.</p><div class="planet-list"><button *ngFor="let p of planets;index as i" [class.active]="selected===p.id" (click)="focus(p.id)"><span class="index">{{i+1}}</span>{{p.name}}<span class="arrow">↗</span></button></div></nav>
 <aside><small>NOW EXPLORING / {{planetIndex+1}} OF 8</small><h2>{{active.name | uppercase}}</h2><p>{{active.description}}</p><div class="stat"><span>MEAN RADIUS</span><b>{{active.radiusKm | number}} km</b></div><div class="stat"><span>MEAN SOLAR DISTANCE</span><b>{{active.meanDistanceAu}} AU</b></div><div class="stat"><span>ORBITAL PERIOD</span><b>{{active.orbitalPeriodDays | number}} days</b></div><button class="next" (click)="focus(planets[(planetIndex+1)%8].id)">NEXT DESTINATION ↗</button><div class="notice">{{textureStatus}}</div></aside>
-<section class="asteroid-data" *ngIf="asteroidsVisible"><h3>NEAR-EARTH APPROACHES <button (click)="asteroidsVisible=false">✕</button></h3><p>Real NASA/JPL close-approach records — not impact predictions.</p><div class="asteroid-entry" *ngFor="let a of asteroids"><b>{{a["fullname"] || a["des"]}}</b><span>{{a["cd"]}}</span><span>{{a["dist"]}} AU · {{a["v_rel"]}} km/s</span></div><div class="notice">{{asteroidStatus}}</div></section><div class="controls"><button (click)="overview()">⊙ SYSTEM VIEW</button><button (click)="toggleAsteroids()">NASA ASTEROIDS</button><span>TIME</span><button *ngFor="let s of [0,1,10,100]" (click)="speed=s" [class.active]="speed===s">{{s===0?'PAUSE':s+'×'}}</button><button (click)="showOrbits=!showOrbits" [class.active]="showOrbits">ORBITS</button><button (click)="focus(selected)">FOCUS</button><button (click)="toggleAutoOrbit()" [class.active]="autoOrbit">AUTO ORBIT</button></div><footer>DRAG TO ORBIT · SCROLL TO ZOOM · CLICK PLANETS · ARTISTIC SCALE / JPL DATA COMING NEXT</footer></div>`})
+<section class="asteroid-data" *ngIf="asteroidsVisible"><h3>NEAR-EARTH APPROACHES <button (click)="asteroidsVisible=false">✕</button></h3><p>Real NASA/JPL close-approach records — not impact predictions.</p><div class="asteroid-entry" *ngFor="let a of asteroids"><b>{{a["fullname"] || a["des"]}}</b><span>{{a["cd"]}}</span><span>{{a["dist"]}} AU · {{a["v_rel"]}} km/s</span></div><div class="notice">{{asteroidStatus}}</div></section><div class="controls"><button (click)="overview()">⊙ SYSTEM VIEW</button><button (click)="toggleAsteroids()">NASA ASTEROIDS</button><span>TIME</span><button *ngFor="let s of [0,1,10,100]" (click)="speed=s" [class.active]="speed===s">{{s===0?'PAUSE':s+'×'}}</button><button (click)="changeDate(-1)" aria-label="Previous UTC day">−1 DAY</button><input type="date" [value]="simulationDate" (change)="setDate($event)" aria-label="Simulation date in UTC" min="1900-01-02" max="2099-12-30"><button (click)="changeDate(1)" aria-label="Next UTC day">+1 DAY</button><button (click)="showOrbits=!showOrbits" [class.active]="showOrbits" [disabled]="ephemerisReady" title="Illustrative circular paths hidden in scientific mode">ORBITS</button><button (click)="focus(selected)">FOCUS</button><button (click)="toggleAutoOrbit()" [class.active]="autoOrbit">AUTO ORBIT</button></div><footer>DRAG TO ORBIT · SCROLL TO ZOOM · CLICK PLANETS · {{scienceStatus}} · DISPLAY DISTANCES COMPRESSED</footer></div>`})
 export class AppComponent implements AfterViewInit,OnDestroy{
  @ViewChild('viewport',{static:true}) viewport!:ElementRef<HTMLDivElement>;
- planets=planets;selected='earth';speed=1;showOrbits=true;autoOrbit=false;asteroidsVisible=false;asteroids:Record<string,string>[]=[];asteroidStatus='Not loaded';textureStatus='Loading local planetary textures...';
+ planets=planets;selected='earth';speed=0;showOrbits=false;autoOrbit=false;simulationDate=new Date().toISOString().slice(0,10);scienceStatus='CONNECTING TO NASA/JPL...';ephemerisReady=false;private ephemeris?:Ephemeris;private fraction=0;private requestCounter=0;asteroidsVisible=false;asteroids:Record<string,string>[]=[];asteroidStatus='Not loaded';textureStatus='Loading local planetary textures...';
  get active(){return this.planets.find(p=>p.id===this.selected)??planets[2];}get planetIndex(){return this.planets.findIndex(p=>p.id===this.selected);}
  private scene=new THREE.Scene();private camera=new THREE.PerspectiveCamera(48,1,.1,3000);private renderer?:THREE.WebGLRenderer;private controls?:OrbitControls;private frame=0;private observer?:ResizeObserver;private last=0;
  private worlds:{p:Planet,mesh:THREE.Mesh,group:THREE.Group,orbit:number,radius:number,angle:number,cloud?:THREE.Mesh}[]=[];private lines:THREE.LineLoop[]=[];
@@ -59,7 +62,45 @@ export class AppComponent implements AfterViewInit,OnDestroy{
  const line=new THREE.LineLoop(new THREE.BufferGeometry().setFromPoints(points),new THREE.LineBasicMaterial({color:0x4c6d94,transparent:true,opacity:.32}));this.lines.push(line);this.scene.add(line);
  });
  this.renderer.domElement.addEventListener('pointerdown',this.onDown);this.renderer.domElement.addEventListener('pointerup',this.onUp);
- this.observer=new ResizeObserver(()=>{const w=host.clientWidth,h=host.clientHeight;if(w&&h){this.camera.aspect=w/h;this.camera.updateProjectionMatrix();this.renderer!.setSize(w,h);}});this.observer.observe(host);this.focus('earth',true);this.frame=requestAnimationFrame(this.renderFrame);fetch('http://localhost:8080/api/planets').then(response=>response.ok?response.json():Promise.reject('Backend offline')).then((data:Planet[])=>{if(data.length===8)this.planets=data;}).catch(()=>{console.info('OrbitLab: backend unavailable, using local planet catalog');});
+ this.observer=new ResizeObserver(()=>{const w=host.clientWidth,h=host.clientHeight;if(w&&h){this.camera.aspect=w/h;this.camera.updateProjectionMatrix();this.renderer!.setSize(w,h);}});this.observer.observe(host);this.focus('earth',true);this.frame=requestAnimationFrame(this.renderFrame);void this.loadEphemeris(this.simulationDate);fetch('http://localhost:8080/api/planets').then(response=>response.ok?response.json():Promise.reject('Backend offline')).then((data:Planet[])=>{if(data.length===8)this.planets=data;}).catch(()=>{console.info('OrbitLab: backend unavailable, using local planet catalog');});
+ }
+ async loadEphemeris(date:string){
+  const request=++this.requestCounter;this.scienceStatus='LOADING NASA/JPL HORIZONS VECTORS';this.ephemerisReady=false;this.speed=0;this.fraction=0;
+  try {
+   const response=await fetch('http://localhost:8080/api/ephemerides?date='+encodeURIComponent(date));
+   if(!response.ok)throw new Error('JPL backend HTTP '+response.status);
+   const data=await response.json() as Ephemeris;
+   if(!Array.isArray(data.bodies)||data.bodies.length!==8||data.bodies.some(b=>b.positionsAu?.length!==3))throw Error('Incomplete ephemerides response');
+   if(request!==this.requestCounter)return;
+   this.ephemeris=data;this.ephemerisReady=true;this.showOrbits=false;
+   this.scienceStatus=(data.staleCache?'CACHED':'NASA/JPL')+' HELIOCENTRIC POSITIONS · ECLIPTIC J2000 · '+date+' UTC';
+   this.updateWorldPositions();
+  }catch(e){if(request!==this.requestCounter)return;this.ephemerisReady=false;this.scienceStatus='JPL UNAVAILABLE — ILLUSTRATIVE ORBITS (NOT SCIENTIFIC)';console.warn('OrbitLab Horizons error',e);}
+ }
+ setDate(event:Event){const input=event.target as HTMLInputElement;if(/^\\d{4}-\\d{2}-\\d{2}$/.test(input.value)){this.simulationDate=input.value;void this.loadEphemeris(input.value);}}
+ changeDate(delta:number){
+  const date=new Date(this.simulationDate+'T00:00:00Z');
+  date.setUTCDate(date.getUTCDate()+delta);
+  const next=date.toISOString().slice(0,10);
+  if(next<'1900-01-02'||next>'2099-12-30')return;
+  this.simulationDate=next;void this.loadEphemeris(next);
+ }
+ private displayPosition(vector:Vector3Au):THREE.Vector3{
+  // Real heliocentric direction; compressed radial distance so inner and outer planets remain explorable.
+  const r=Math.hypot(vector.xAu,vector.yAu,vector.zAu);
+  const radius=10+28*Math.sqrt(r);
+  const scale=radius/Math.max(r,.000001);
+  return new THREE.Vector3(vector.xAu*scale,vector.zAu*scale,vector.yAu*scale);
+ }
+ private updateWorldPositions(){
+  if(!this.ephemerisReady||!this.ephemeris)return;
+  for(const world of this.worlds){
+   const body=this.ephemeris.bodies.find(b=>b.id===world.p.id);
+   if(!body)continue;
+   const a=this.displayPosition(body.positionsAu[1]);
+   const b=this.displayPosition(body.positionsAu[2]);
+   world.group.position.copy(a.lerp(b,this.fraction));
+  }
  }
  async toggleAsteroids(){this.asteroidsVisible=!this.asteroidsVisible;if(!this.asteroidsVisible)return;this.asteroidStatus='Loading from Spring Boot and NASA/JPL...';try{const res=await fetch('http://localhost:8080/api/asteroids/close-approaches');if(!res.ok)throw Error('Backend returned '+res.status);const payload=await res.json() as {asteroids:Record<string,string>[],cached?:boolean};this.asteroids=payload.asteroids??[];this.asteroidStatus=payload.cached?'Showing cached JPL data':'NASA/JPL data received from Java backend';}catch(e){this.asteroidStatus='Could not load JPL data. Check backend connection.';}}
  focus(id:string,immediate=false){
@@ -88,8 +129,17 @@ export class AppComponent implements AfterViewInit,OnDestroy{
  private onDown=(e:PointerEvent)=>{this.down={x:e.clientX,y:e.clientY};};
  private onUp=(e:PointerEvent)=>{if(Math.hypot(e.clientX-this.down.x,e.clientY-this.down.y)>5)return;const rect=this.renderer!.domElement.getBoundingClientRect();this.pointer.set((e.clientX-rect.left)/rect.width*2-1,-(e.clientY-rect.top)/rect.height*2+1);this.ray.setFromCamera(this.pointer,this.camera);const hit=this.ray.intersectObjects(this.worlds.map(w=>w.mesh),false)[0];const world=this.worlds.find(w=>w.mesh===hit?.object);if(world)this.focus(world.p.id);};
  private renderFrame=(now:number)=>{const dt=Math.min((now-this.last)/1000,.05);this.last=now;
- for(const w of this.worlds){w.angle+=dt*this.speed*90/w.p.orbitalPeriodDays;w.group.position.set(Math.cos(w.angle)*w.orbit,0,Math.sin(w.angle)*w.orbit);w.mesh.rotation.y+=dt*.04;if(w.cloud)w.cloud.rotation.y+=dt*.06;}
- this.lines.forEach(line=>line.visible=this.showOrbits);
+ if(this.ephemerisReady){
+  if(this.speed>0){
+   this.fraction=Math.min(1,this.fraction+dt*this.speed/120);
+   if(this.fraction>=1){this.speed=0;this.scienceStatus='NASA/JPL END OF LOADED DAY · SELECT NEXT DAY';}
+  }
+  this.updateWorldPositions();
+ }else{
+  for(const w of this.worlds){w.angle+=dt*this.speed*90/w.p.orbitalPeriodDays;w.group.position.set(Math.cos(w.angle)*w.orbit,0,Math.sin(w.angle)*w.orbit);}
+ }
+ for(const w of this.worlds){w.mesh.rotation.y+=dt*.04;if(w.cloud)w.cloud.rotation.y+=dt*.06;}
+ this.lines.forEach(line=>line.visible=!this.ephemerisReady&&this.showOrbits);
  const current=this.worlds.find(w=>w.p.id===this.selected);
  if(this.controls){
   if(this.flight){

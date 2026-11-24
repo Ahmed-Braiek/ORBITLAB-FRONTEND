@@ -9,3 +9,5 @@ html,body{height:100%;overflow:hidden}.shell{height:100dvh;min-height:0}.intro{b
 footer{bottom:9px;pointer-events:none}.status{white-space:nowrap}
 @media(max-height:790px){.intro{top:95px}.intro h1{font-size:36px;margin:10px 0}.intro p{margin:8px 0}.planet-list{margin-top:12px}.planet-list button{padding:5px 10px}aside{top:100px;padding:17px}aside h2{margin:12px 0}aside p{margin:9px 0}.stat{padding:10px 0}.controls{bottom:20px}}
 @media(max-width:750px){.intro{top:80px;width:205px;padding-right:12px}.intro h1{font-size:29px}.planet-list{width:170px}.controls{bottom:14px}.controls button{font-size:9px;padding:7px 5px}footer{display:none}}
+
+.controls input[type=date]{border:1px solid #6489b178;border-radius:2px;color:#e6f2ff;background:#111e32;padding:7px;font:500 11px 'DM Sans';color-scheme:dark}.controls button:disabled{opacity:.35;cursor:not-allowed}.controls{width:max-content;max-width:calc(100vw - 20px)}footer{background:#030915ac;padding:4px 8px;border-radius:2px;max-width:95vw;white-space:normal}@media(max-width:900px){.controls{bottom:32px;max-width:94vw}.controls input[type=date]{font-size:10px;padding:5px}.controls button{font-size:9px;padding:7px 5px}}

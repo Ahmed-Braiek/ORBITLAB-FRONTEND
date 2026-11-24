@@ -1,11 +1,12 @@
 {
   "name": "orbitlab-frontend",
-  "version": "0.2.0",
+  "version": "0.4.0",
   "private": true,
   "scripts": {
     "start": "ng serve --host localhost --port 4200",
     "build": "ng build",
-    "assets:download": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/download-textures.ps1"
+    "assets:download": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/download-textures.ps1",
+    "test:build": "npm run build"
   },
   "dependencies": {
     "@angular/common": "^20.3.0",
