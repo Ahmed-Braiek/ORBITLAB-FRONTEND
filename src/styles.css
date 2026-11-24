@@ -131,3 +131,25 @@ footer{
 .shell header .status{margin-right:165px}
 @media(max-width:900px){.shell header .status{display:none}}
 @media(max-width:650px){.shell.astra-open .viewport{right:0;opacity:.4;pointer-events:none}.shell.astra-open .intro{display:none}}
+
+/* Collapsible explorer panels. Tabs remain visible; WebGL is never covered by hidden panels. */
+.panel-tab{position:absolute;top:110px;z-index:11;border:1px solid #8bbfea77;background:linear-gradient(135deg,#102f50ee,#071a2fee);color:#cbe8ff;display:flex;align-items:center;gap:8px;padding:10px 12px;border-radius:7px;cursor:pointer;font:700 12px 'DM Sans',sans-serif;letter-spacing:1px;box-shadow:0 7px 24px #0008;transition:background .2s,transform .2s}
+.panel-tab:hover{background:#235278ee}
+.panel-tab span{font-size:9px;color:#9ac0e0}
+.panel-tab-left{left:4%}
+.panel-tab-right{right:4%}
+.intro{transition:opacity .22s,transform .22s,visibility .22s;top:159px;max-height:calc(100dvh - var(--orbit-dock-height) - 180px)}
+aside{transition:opacity .22s,transform .22s,visibility .22s;top:159px}
+.shell.left-collapsed .intro{opacity:0;visibility:hidden;pointer-events:none;transform:translateX(-16px)}
+.shell.right-collapsed aside{opacity:0;visibility:hidden;pointer-events:none;transform:translateX(16px)}
+.shell.astra-open .panel-tab-right{display:none}
+@media(max-width:900px){
+ .panel-tab-left{left:3%}.panel-tab-right{right:3%}
+ .intro{top:148px}.shell aside{top:148px}
+}
+@media(max-width:650px){
+ .panel-tab{top:82px;padding:8px;font-size:11px}
+ .panel-tab-left{left:12px}
+ .panel-tab-right{display:none}
+ .intro{top:128px;max-height:calc(100dvh - var(--orbit-dock-height) - 141px)}
+}
