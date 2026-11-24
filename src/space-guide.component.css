@@ -108,7 +108,7 @@
 :host ::ng-deep .astra-markdown table{display:block;overflow-x:auto;border-collapse:collapse;width:100%;margin:14px 0;font-size:12px}
 :host ::ng-deep .astra-markdown :is(td,th){border:1px solid #6389ab59;padding:8px;text-align:left}
 :host ::ng-deep .astra-markdown th{background:#214565;color:#f4faff}
-@media(max-width:900px) and (min-width:651px){:host{--astra-side-width:clamp(355px,44vw,440px)}}
+/* Desktop drawer width matches the render viewport reservation at all screen sizes. */
 @media(max-width:650px){
  :host{--astra-side-width:100vw}
  .astra-panel{width:100vw}
