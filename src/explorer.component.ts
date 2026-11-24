@@ -18,14 +18,14 @@ const planets:Planet[]=[
 <div #viewport class="viewport"></div>
 <nav class="intro"><div class="eyebrow">IMMERSIVE SPACE EXPLORATION</div><h1>BEYOND<br><i>THE HORIZON.</i></h1><p>Travel between worlds. Explore the Solar System.</p><div class="planet-list"><button *ngFor="let p of planets;index as i" [class.active]="selected===p.id" (click)="focus(p.id)"><span class="index">{{i+1}}</span>{{p.name}}<span class="arrow">↗</span></button></div></nav>
 <aside><small>NOW EXPLORING / {{planetIndex+1}} OF 8</small><h2>{{active.name | uppercase}}</h2><p>{{active.description}}</p><div class="stat"><span>MEAN RADIUS</span><b>{{active.radiusKm | number}} km</b></div><div class="stat"><span>MEAN SOLAR DISTANCE</span><b>{{active.meanDistanceAu}} AU</b></div><div class="stat"><span>ORBITAL PERIOD</span><b>{{active.orbitalPeriodDays | number}} days</b></div><button class="next" (click)="focus(planets[(planetIndex+1)%8].id)">NEXT DESTINATION ↗</button><div class="notice">{{textureStatus}}</div></aside>
-<section class="asteroid-data" *ngIf="asteroidsVisible"><h3>NEAR-EARTH APPROACHES <button (click)="asteroidsVisible=false">✕</button></h3><p>Real NASA/JPL close-approach records — not impact predictions.</p><div class="asteroid-entry" *ngFor="let a of asteroids"><b>{{a["fullname"] || a["des"]}}</b><span>{{a["cd"]}}</span><span>{{a["dist"]}} AU · {{a["v_rel"]}} km/s</span></div><div class="notice">{{asteroidStatus}}</div></section><div class="controls"><button (click)="toggleAsteroids()">NASA ASTEROIDS</button><span>TIME</span><button *ngFor="let s of [0,1,10,100]" (click)="speed=s" [class.active]="speed===s">{{s===0?'PAUSE':s+'×'}}</button><button (click)="showOrbits=!showOrbits" [class.active]="showOrbits">ORBITS</button><button (click)="focus(selected)">FOCUS</button></div><footer>DRAG TO ORBIT · SCROLL TO ZOOM · CLICK PLANETS · ARTISTIC SCALE / JPL DATA COMING NEXT</footer></div>`})
+<section class="asteroid-data" *ngIf="asteroidsVisible"><h3>NEAR-EARTH APPROACHES <button (click)="asteroidsVisible=false">✕</button></h3><p>Real NASA/JPL close-approach records — not impact predictions.</p><div class="asteroid-entry" *ngFor="let a of asteroids"><b>{{a["fullname"] || a["des"]}}</b><span>{{a["cd"]}}</span><span>{{a["dist"]}} AU · {{a["v_rel"]}} km/s</span></div><div class="notice">{{asteroidStatus}}</div></section><div class="controls"><button (click)="overview()">⊙ SYSTEM VIEW</button><button (click)="toggleAsteroids()">NASA ASTEROIDS</button><span>TIME</span><button *ngFor="let s of [0,1,10,100]" (click)="speed=s" [class.active]="speed===s">{{s===0?'PAUSE':s+'×'}}</button><button (click)="showOrbits=!showOrbits" [class.active]="showOrbits">ORBITS</button><button (click)="focus(selected)">FOCUS</button><button (click)="toggleAutoOrbit()" [class.active]="autoOrbit">AUTO ORBIT</button></div><footer>DRAG TO ORBIT · SCROLL TO ZOOM · CLICK PLANETS · ARTISTIC SCALE / JPL DATA COMING NEXT</footer></div>`})
 export class AppComponent implements AfterViewInit,OnDestroy{
  @ViewChild('viewport',{static:true}) viewport!:ElementRef<HTMLDivElement>;
- planets=planets;selected='earth';speed=1;showOrbits=true;asteroidsVisible=false;asteroids:Record<string,string>[]=[];asteroidStatus='Not loaded';textureStatus='Loading local planetary textures...';
+ planets=planets;selected='earth';speed=1;showOrbits=true;autoOrbit=false;asteroidsVisible=false;asteroids:Record<string,string>[]=[];asteroidStatus='Not loaded';textureStatus='Loading local planetary textures...';
  get active(){return this.planets.find(p=>p.id===this.selected)??planets[2];}get planetIndex(){return this.planets.findIndex(p=>p.id===this.selected);}
  private scene=new THREE.Scene();private camera=new THREE.PerspectiveCamera(48,1,.1,3000);private renderer?:THREE.WebGLRenderer;private controls?:OrbitControls;private frame=0;private observer?:ResizeObserver;private last=0;
  private worlds:{p:Planet,mesh:THREE.Mesh,group:THREE.Group,orbit:number,radius:number,angle:number,cloud?:THREE.Mesh}[]=[];private lines:THREE.LineLoop[]=[];
- private travelTarget=new THREE.Vector3();private travelOffset=new THREE.Vector3(12,6,18);private textures:THREE.Texture[]=[];private down={x:0,y:0};
+ private travelTarget=new THREE.Vector3();private travelOffset=new THREE.Vector3(12,6,18);private overviewActive=false;private flight?:{elapsed:number,duration:number,fromPos:THREE.Vector3,fromTarget:THREE.Vector3,toPos:THREE.Vector3,toTarget:THREE.Vector3};private followedPosition=new THREE.Vector3();private textures:THREE.Texture[]=[];private down={x:0,y:0};
  private pointer=new THREE.Vector2();private ray=new THREE.Raycaster();
  ngAfterViewInit(){
  const host=this.viewport.nativeElement;
@@ -33,7 +33,7 @@ export class AppComponent implements AfterViewInit,OnDestroy{
  this.renderer.setPixelRatio(Math.min(devicePixelRatio,2));this.renderer.outputColorSpace=THREE.SRGBColorSpace;
  this.renderer.toneMapping=THREE.ACESFilmicToneMapping;this.renderer.toneMappingExposure=1.4;host.appendChild(this.renderer.domElement);
  this.camera.position.set(30,18,40);this.controls=new OrbitControls(this.camera,this.renderer.domElement);
- this.controls.enableDamping=true;this.controls.minDistance=2;this.controls.maxDistance=500;
+ this.controls.enableDamping=true;this.controls.dampingFactor=.055;this.controls.rotateSpeed=.55;this.controls.zoomSpeed=.85;this.controls.enablePan=false;this.controls.minPolarAngle=.08;this.controls.maxPolarAngle=Math.PI-.08;this.controls.minDistance=2;this.controls.maxDistance=500;this.controls.addEventListener('start',()=>{this.flight=undefined;this.controls!.enabled=true;});
  this.scene.add(new THREE.AmbientLight(0x8c9dc0,.18));
  this.scene.add(new THREE.PointLight(0xffe7c4,7000));
  this.scene.add(new THREE.Mesh(new THREE.SphereGeometry(5,64,48),new THREE.MeshBasicMaterial({color:0xffdb87})));
@@ -62,14 +62,51 @@ export class AppComponent implements AfterViewInit,OnDestroy{
  this.observer=new ResizeObserver(()=>{const w=host.clientWidth,h=host.clientHeight;if(w&&h){this.camera.aspect=w/h;this.camera.updateProjectionMatrix();this.renderer!.setSize(w,h);}});this.observer.observe(host);this.focus('earth',true);this.frame=requestAnimationFrame(this.renderFrame);fetch('http://localhost:8080/api/planets').then(response=>response.ok?response.json():Promise.reject('Backend offline')).then((data:Planet[])=>{if(data.length===8)this.planets=data;}).catch(()=>{console.info('OrbitLab: backend unavailable, using local planet catalog');});
  }
  async toggleAsteroids(){this.asteroidsVisible=!this.asteroidsVisible;if(!this.asteroidsVisible)return;this.asteroidStatus='Loading from Spring Boot and NASA/JPL...';try{const res=await fetch('http://localhost:8080/api/asteroids/close-approaches');if(!res.ok)throw Error('Backend returned '+res.status);const payload=await res.json() as {asteroids:Record<string,string>[],cached?:boolean};this.asteroids=payload.asteroids??[];this.asteroidStatus=payload.cached?'Showing cached JPL data':'NASA/JPL data received from Java backend';}catch(e){this.asteroidStatus='Could not load JPL data. Check backend connection.';}}
- focus(id:string,immediate=false){this.selected=id;const w=this.worlds.find(x=>x.p.id===id);if(!w)return;const d=Math.max(w.radius*5,12);this.travelTarget.copy(w.group.position);this.travelOffset.set(d*.6,d*.25,d);if(immediate){this.camera.position.copy(this.travelTarget).add(this.travelOffset);this.controls!.target.copy(this.travelTarget);this.controls!.update();}}
+ focus(id:string,immediate=false){
+ this.selected=id;this.overviewActive=false;
+ const w=this.worlds.find(x=>x.p.id===id);if(!w||!this.controls)return;
+ const distance=Math.max(w.radius*5.2,12);
+ const direction=this.camera.position.clone().sub(this.controls.target).normalize();
+ if(direction.lengthSq()<.001)direction.set(.5,.3,1).normalize();
+ const destination=w.group.position.clone().addScaledVector(direction,distance);
+ const target=w.group.position.clone();
+ this.followedPosition.copy(target);
+ this.startFlight(destination,target,immediate);
+ }
+ overview(){
+ this.overviewActive=true;this.startFlight(new THREE.Vector3(0,155,215),new THREE.Vector3(),false);
+ }
+ toggleAutoOrbit(){
+ this.autoOrbit=!this.autoOrbit;if(this.controls)this.controls.autoRotate=this.autoOrbit;
+ }
+ private startFlight(position:THREE.Vector3,target:THREE.Vector3,immediate:boolean){
+ if(!this.controls)return;
+ if(immediate){this.flight=undefined;this.camera.position.copy(position);this.controls.target.copy(target);this.controls.update();return;}
+ this.flight={elapsed:0,duration:1.45,fromPos:this.camera.position.clone(),fromTarget:this.controls.target.clone(),toPos:position,toTarget:target};
+ this.controls.enabled=false;
+ }
  private onDown=(e:PointerEvent)=>{this.down={x:e.clientX,y:e.clientY};};
  private onUp=(e:PointerEvent)=>{if(Math.hypot(e.clientX-this.down.x,e.clientY-this.down.y)>5)return;const rect=this.renderer!.domElement.getBoundingClientRect();this.pointer.set((e.clientX-rect.left)/rect.width*2-1,-(e.clientY-rect.top)/rect.height*2+1);this.ray.setFromCamera(this.pointer,this.camera);const hit=this.ray.intersectObjects(this.worlds.map(w=>w.mesh),false)[0];const world=this.worlds.find(w=>w.mesh===hit?.object);if(world)this.focus(world.p.id);};
  private renderFrame=(now:number)=>{const dt=Math.min((now-this.last)/1000,.05);this.last=now;
  for(const w of this.worlds){w.angle+=dt*this.speed*90/w.p.orbitalPeriodDays;w.group.position.set(Math.cos(w.angle)*w.orbit,0,Math.sin(w.angle)*w.orbit);w.mesh.rotation.y+=dt*.04;if(w.cloud)w.cloud.rotation.y+=dt*.06;}
  this.lines.forEach(line=>line.visible=this.showOrbits);
  const current=this.worlds.find(w=>w.p.id===this.selected);
- if(current&&this.controls){const shift=current.group.position.clone().sub(this.controls.target).multiplyScalar(.065);this.controls.target.add(shift);this.camera.position.add(shift);if(this.travelTarget.distanceTo(this.controls.target)>1){const targetPos=current.group.position.clone().add(this.travelOffset);this.camera.position.lerp(targetPos,.025);}this.controls.update();}
+ if(this.controls){
+  if(this.flight){
+   const f=this.flight;f.elapsed+=dt;const progress=Math.min(1,f.elapsed/f.duration);
+   const eased=1-Math.pow(1-progress,3);
+   const movingTarget=!this.overviewActive&&current?current.group.position:new THREE.Vector3();
+   const target=f.toTarget.clone().lerp(movingTarget,progress);
+   const pos=f.toPos.clone().add(movingTarget.clone().sub(f.toTarget));
+   this.camera.position.copy(f.fromPos).lerp(pos,eased);this.controls.target.copy(f.fromTarget).lerp(target,eased);
+   if(progress>=1){this.flight=undefined;this.controls.enabled=true;this.followedPosition.copy(this.controls.target);}
+  }else if(!this.overviewActive&&current){
+   const displacement=current.group.position.clone().sub(this.followedPosition);
+   this.camera.position.add(displacement);this.controls.target.add(displacement);
+   this.followedPosition.copy(current.group.position);
+  }
+  this.controls.update(dt);
+ }
  this.renderer?.render(this.scene,this.camera);this.frame=requestAnimationFrame(this.renderFrame);};
  ngOnDestroy(){cancelAnimationFrame(this.frame);this.observer?.disconnect();this.renderer?.domElement.removeEventListener('pointerdown',this.onDown);this.renderer?.domElement.removeEventListener('pointerup',this.onUp);this.controls?.dispose();this.scene.traverse(o=>{const m=o as THREE.Mesh;m.geometry?.dispose();if(m.material)(Array.isArray(m.material)?m.material:[m.material]).forEach(x=>x.dispose());});this.textures.forEach(x=>x.dispose());this.renderer?.dispose();}
 }
