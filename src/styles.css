@@ -153,3 +153,25 @@ aside{transition:opacity .22s,transform .22s,visibility .22s;top:159px}
  .panel-tab-right{display:none}
  .intro{top:128px;max-height:calc(100dvh - var(--orbit-dock-height) - 141px)}
 }
+
+/* UI polish: compact edge-tab controls. Above previous historical overrides. */
+.panel-tab{
+ top:111px;min-height:32px;height:32px;padding:0 10px;
+ display:inline-flex;align-items:center;gap:7px;
+ border-radius:999px;border:1px solid #91bce05c;
+ background:#0b2038e8;backdrop-filter:blur(14px);
+ color:#d9efff;font:700 10px/1 'DM Sans',sans-serif;letter-spacing:1.15px;
+ box-shadow:0 4px 15px #0005;transition:background .18s,border-color .18s,box-shadow .18s,transform .18s;
+}
+.panel-tab .tab-label{color:#accae3;font-size:9px;font-weight:700;letter-spacing:1.35px}
+.panel-tab .tab-chevron{display:inline-grid;place-items:center;font:500 18px/1 'DM Sans',sans-serif;color:#b9e4ff;min-width:11px}
+.panel-tab-left{left:2%}.panel-tab-right{right:2%}
+.panel-tab:hover{background:#164167ee;border-color:#b4dcffb3;transform:translateY(-1px);box-shadow:0 5px 19px #1668ab3c}
+.panel-tab:focus-visible{outline:2px solid #a7d8ff;outline-offset:3px}
+.panel-tab:active{transform:none}
+.shell.left-collapsed .panel-tab-left,.shell.right-collapsed .panel-tab-right{background:#143a60d9;border-color:#78b9e17c}
+@media(max-width:900px){.panel-tab-left{left:12px}.panel-tab-right{right:12px}}
+@media(max-width:650px){.panel-tab{top:82px;height:29px;min-height:29px;padding:0 9px}.panel-tab-right{display:none}}
+/* Chat reserves wider render space while keeping the planet unobscured. */
+.shell{--astra-side-width:clamp(380px,33vw,500px)}
+@media(max-width:650px){.shell{--astra-side-width:100vw}}
